@@ -137,6 +137,11 @@
   }
 
   /* ---------- Pronóstico de un evento ---------- */
+  // Un mercado de 3 resultados (1X2 con empate, tiempo reglamentario) NO es comparable con uno de 2 (quién gana, con prórroga):
+  // en deportes sin empate se descartan las casas que publican empate, y en fútbol las que no lo publican.
+  function filterBooksByMarket(books, draw) {
+    const out = {}; for (const b in books) { const ml = books[b] && books[b].ml; if (!ml) continue; if ((ml[1] != null) === !!draw) out[b] = books[b]; } return out;
+  }
   const isExchange = (b) => /exchange|matchbook|smarkets/i.test(b); // bolsas: cobran comisión, no cuentan como «mejor cuota»
   const isCross = (lg) => /\/(uefa|conmebol|concacaf|fifa|afc|caf)\./.test(lg) || /friendly|cup|copa|pokal|coppa|coupe|\.fa$|supercup|supercopa|nations|world|gold|leagues/.test(lg);
   function forecast(ctx, ev, opts) {
@@ -271,7 +276,7 @@
     return best && best.o;
   }
 
-  const api = { isExchange, makeKeyer, normTeam, teamSim, matchEvent, fitGlobal, fitView, backtestGlobal, summarize, isPreseasonDate, isCross, calib, fitTemp, SPORT, cfgOf, isGoals, eloRun, eloProb, expected, marketProbs, buildContext, forecast, backtestLeague };
+  const api = { filterBooksByMarket, isExchange, makeKeyer, normTeam, teamSim, matchEvent, fitGlobal, fitView, backtestGlobal, summarize, isPreseasonDate, isCross, calib, fitTemp, SPORT, cfgOf, isGoals, eloRun, eloProb, expected, marketProbs, buildContext, forecast, backtestLeague };
   if (typeof module !== 'undefined' && module.exports) module.exports = api;
   root.SLMulti = api;
 })(typeof window !== 'undefined' ? window : globalThis);

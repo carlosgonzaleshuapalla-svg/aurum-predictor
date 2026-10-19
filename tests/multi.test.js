@@ -109,6 +109,10 @@ ok(X.matchEvent({ t: T0 + 5 * 864e5, h: 'Tottenham', a: 'Coventry' }, oev) === u
 ok(!X.matchEvent({ t: T0, h: 'Tottenham', a: 'Arsenal' }, oev), 'no une si un equipo no coincide');
 ok(X.isExchange('Betfair Exchange') && X.isExchange('BetfairExchange') && X.isExchange('Matchbook') && !X.isExchange('Betsson'), 'detecta bolsas por nombre');
 
+const bk = { Betsson: { ml: [1.69, null, 2.16] }, Coolbet: { ml: [2.2, 4.1, 2.85] }, Casa3: { ml: [2.0, 3.5, 3.6] } };
+ok(Object.keys(X.filterBooksByMarket(bk, false)).join() === 'Betsson', 'sin empate (NHL, NBA…): se descartan casas con mercado de 3 resultados');
+ok(Object.keys(X.filterBooksByMarket(bk, true)).join() === 'Coolbet,Casa3', 'fútbol: solo casas con empate');
+
 console.log('[X5] Calibración');
 const q = X.calib([0.9, 0.1], 0.5); ok(near(q[0] + q[1], 1, 1e-12) && q[0] < 0.9 && q[0] > 0.5, 'calib(<1) suaviza y normaliza');
 ok(X.calib([0.7, 0.3], 1)[0] === 0.7, 'calib(1) no cambia nada');

@@ -36,13 +36,14 @@
         compute();
       }
       // todas las casas de un evento: ESPN (DraftKings) + football-data (hasta 9 casas) + las que añadió el usuario (✎)
-      const allBooks = (e) => Object.assign({}, e.odds || {}, ctx.oapiBooks ? ctx.oapiBooks(e) || {} : {}, ctx.fdBooks(e) || {}, manualBooks(e) || {});
+      const sameMarket = (e, books) => X.filterBooksByMarket(books, lgById[e.lg].draw); // no mezclar 3 resultados con 2
+      const allBooks = (e) => Object.assign({}, sameMarket(e, Object.assign({}, e.odds || {}, ctx.oapiBooks ? ctx.oapiBooks(e) || {} : {}, ctx.fdBooks(e) || {})), manualBooks(e) || {});
       function manualBooks(e) {
         const man = ctx.manual()[e.id]; if (!man) return null;
         const r = {}; for (const b in man) if (man[b]['1x2']) r[b + ' ✎'] = { ml: man[b]['1x2'] }; return r;
       }
       function compute() {
-        fc = {}; evs.forEach((e) => { fc[e.id] = X.forecast(sctx, e, { wModel: S.wModel / 100, extraBooks: Object.assign({}, ctx.oapiBooks ? ctx.oapiBooks(e) || {} : {}, ctx.fdBooks(e) || {}, manualBooks(e) || {}), temp: BTM._temp }); });
+        fc = {}; evs.forEach((e) => { fc[e.id] = X.forecast(sctx, e, { wModel: S.wModel / 100, extraBooks: Object.assign({}, sameMarket(e, Object.assign({}, ctx.oapiBooks ? ctx.oapiBooks(e) || {} : {}, ctx.fdBooks(e) || {})), manualBooks(e) || {}), temp: BTM._temp }); });
       }
       const spOf = (e) => lgById[e.lg].sport;
       const startsIn = (e) => (e.t - Date.now()) / 3600e3;
