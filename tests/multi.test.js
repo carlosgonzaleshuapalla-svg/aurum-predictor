@@ -113,6 +113,9 @@ const bk = { Betsson: { ml: [1.69, null, 2.16] }, Coolbet: { ml: [2.2, 4.1, 2.85
 ok(Object.keys(X.filterBooksByMarket(bk, false)).join() === 'Betsson', 'sin empate (NHL, NBA…): se descartan casas con mercado de 3 resultados');
 ok(Object.keys(X.filterBooksByMarket(bk, true)).join() === 'Coolbet,Casa3', 'fútbol: solo casas con empate');
 
+ok(X.LEAGUE_OPTS['soccer/per.1'].alt['Cusco FC'] > 3 && X.LEAGUE_OPTS['soccer/per.1'].alt['Sporting Cristal'] < 0.5, 'Liga 1 trae altitudes (Cusco alto, Lima bajo)');
+ok(Math.abs(X.altDiff('soccer/per.1', 'Cusco FC', 'Sporting Cristal') - 3.25) < 1e-9 && X.altDiff('soccer/per.1', 'Cusco FC', 'Equipo Nuevo') === null && X.altDiff('soccer/arg.1', 'Boca', 'River') === null, 'altDiff: solo con altitud conocida, nunca inventada');
+
 console.log('[X5] Calibración');
 const q = X.calib([0.9, 0.1], 0.5); ok(near(q[0] + q[1], 1, 1e-12) && q[0] < 0.9 && q[0] > 0.5, 'calib(<1) suaviza y normaliza');
 ok(X.calib([0.7, 0.3], 1)[0] === 0.7, 'calib(1) no cambia nada');

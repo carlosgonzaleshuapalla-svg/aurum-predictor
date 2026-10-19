@@ -42,6 +42,22 @@ ok(Mo.fitLeague(ms.slice(0, 10), '2030-01-01') === null, 'pocos datos → null')
 const fitFuture = Mo.fitLeague(ms, '2024-01-02', { xi: 0 });
 ok(fitFuture === null || fitFuture.n < ms.length, 'no usa partidos posteriores a la fecha de corte (sin fuga)');
 
+console.log('[M3b] Efecto de altitud');
+{
+  let sd = 21; const r2 = () => ((sd = (sd * 1664525 + 1013904223) % 4294967296) / 4294967296);
+  const pz = (l) => { const L = Math.exp(-l); let k = 0, p = 1; do { k++; p *= r2(); } while (p > L); return k - 1; };
+  const ALT = { Alto1: 3.4, Alto2: 3.0, Bajo1: 0.1, Bajo2: 0.05, Bajo3: 0.2 }, tn = Object.keys(ALT), g = []; let di = 0;
+  for (let r = 0; r < 18; r++) for (const h of tn) for (const a of tn) if (h !== a) { const x = Math.max(0, ALT[h] - ALT[a]); g.push({ d: new Date(Date.UTC(2024, 0, 1) + (di++ >> 2) * 864e5).toISOString().slice(0, 10), h, a, hg: pz(1.3 * Math.exp(0.15 * x)), ag: pz(1.0 * Math.exp(-0.1 * x)) }); }
+  const fa = Mo.fitLeague(g, '2024-12-31', { k: 3, xi: 0, alt: ALT, altMode: 'oneSided', altRidge: 2 });
+  // parte del efecto la absorben el ataque/defensa de los equipos de altura (colinealidad): se exige signo correcto y magnitud no nula
+  ok(fa.bH > 0.02 && fa.bH < 0.25 && fa.bA <= 0.005, `detecta el efecto de altitud con signo correcto (bH=${fa.bH.toFixed(2)}, bA=${fa.bA.toFixed(2)})`);
+  const pa = Mo.predictMatch(fa, 'Alto1', 'Bajo1'); ok(pa.lh > pa.la, 'local de altura vs visitante de llanura: más goles al local');
+  const pe = Mo.predictMatch(fa, 'Bajo1', 'Bajo2'), pf = Mo.predictMatch(Mo.fitLeague(g, '2024-12-31', { k: 3, xi: 0 }), 'Bajo1', 'Bajo2');
+  ok(Math.abs(pe.lh - pf.lh) < 0.15, 'sin diferencia de altitud el efecto añadido es ≈ 0');
+  const fu = Mo.fitLeague(g, '2024-12-31', { k: 3, xi: 0, alt: { Alto1: 3.4 }, altMode: 'oneSided' });
+  ok(fu && Math.abs(fu.bH) < 0.12, 'con altitudes casi todas desconocidas no se inventa un efecto grande');
+}
+
 console.log('[M4] Valor, Kelly, mejor cuota');
 ok(near(Mo.expectedValue(0.55, 2.0), 0.1, 1e-12), 'EV = p·cuota − 1');
 ok(Mo.kelly(0.5, 2.0) === 0 && Mo.kelly(0.4, 2.0) === 0, 'Kelly = 0 sin ventaja');

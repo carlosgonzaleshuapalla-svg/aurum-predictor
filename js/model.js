@@ -32,7 +32,7 @@
     for (let i = 0; i <= MAXG; i++) for (let j = 0; j <= MAXG; j++) M[i][j] /= tot;
     return M;
   }
-  function marketsFromMatrix(M) {
+  function marketsFromMatrix(M, drawBoost) {
     let h = 0, d = 0, a = 0, over = 0, btts = 0;
     for (let i = 0; i <= MAXG; i++) for (let j = 0; j <= MAXG; j++) {
       const p = M[i][j];
@@ -40,9 +40,15 @@
       if (i + j >= 3) over += p;
       if (i > 0 && j > 0) btts += p;
     }
+    if (drawBoost && drawBoost !== 1) { const d2 = d * drawBoost, t = h + a + d2; h /= t; a /= t; d = d2 / t; } // ajuste de empates (los modelos de Poisson suelen subestimarlos)
     return { p1x2: [h, d, a], ou25: [over, 1 - over], btts: [btts, 1 - btts] };
   }
 
+  // Efecto de altitud: x = diferencia de altitud (km) entre la sede local y la del visitante (0 si no se conoce alguna)
+  function altX(alt, mode, h, a) {
+    if (!alt || alt[h] == null || alt[a] == null) return 0;
+    const d = alt[h] - alt[a]; return mode === 'signed' ? d : Math.max(0, d);
+  }
   /* ---------- Ajuste de fuerzas por liga (ataque/defensa con decaimiento temporal) ---------- */
   function fitLeague(matches, asOf, opts) {
     opts = Object.assign({ xi: 0.0019, k: 4, iters: 30, minW: 0.02 }, opts || {}); // vida media ≈ 365 días
@@ -51,7 +57,7 @@
     for (const m of matches) {
       const dn = dayNum(m.d); if (dn >= t0) continue;
       const w = Math.exp(-opts.xi * (t0 - dn)); if (w < opts.minW) continue;
-      ms.push({ h: m.h, a: m.a, hg: m.hg, ag: m.ag, w });
+      ms.push({ h: m.h, a: m.a, hg: m.hg, ag: m.ag, w, x: altX(opts.alt, opts.altMode, m.h, m.a) });
     }
     if (ms.length < 30) return null;
     let sw = 0, sh = 0, sa = 0;
@@ -60,28 +66,45 @@
     const teams = {};
     for (const m of ms) for (const t of [m.h, m.a]) if (!teams[t]) teams[t] = { att: 1, def: 1, n: 0 };
     for (const m of ms) { teams[m.h].n += m.w; teams[m.a].n += m.w; }
+    let bH = 0, bA = 0; const useAlt = !!opts.alt;
     for (let it = 0; it < opts.iters; it++) {
       const na = {}, da = {}, nd = {}, dd = {};
       for (const t in teams) na[t] = da[t] = nd[t] = dd[t] = 0;
       for (const m of ms) {
-        const H = teams[m.h], A = teams[m.a];
-        na[m.h] += m.w * m.hg; da[m.h] += m.w * muH * A.def;
-        na[m.a] += m.w * m.ag; da[m.a] += m.w * muA * H.def;
-        nd[m.h] += m.w * m.ag; dd[m.h] += m.w * muA * A.att;
-        nd[m.a] += m.w * m.hg; dd[m.a] += m.w * muH * H.att;
+        const H = teams[m.h], A = teams[m.a], eH = muH * Math.exp(bH * m.x), eA = muA * Math.exp(bA * m.x);
+        na[m.h] += m.w * m.hg; da[m.h] += m.w * eH * A.def;
+        na[m.a] += m.w * m.ag; da[m.a] += m.w * eA * H.def;
+        nd[m.h] += m.w * m.ag; dd[m.h] += m.w * eA * A.att;
+        nd[m.a] += m.w * m.hg; dd[m.a] += m.w * eH * H.att;
       }
       let sa2 = 0, sd2 = 0, c = 0;
       for (const t in teams) { teams[t].att = (na[t] + opts.k) / (da[t] + opts.k); teams[t].def = (nd[t] + opts.k) / (dd[t] + opts.k); sa2 += teams[t].att; sd2 += teams[t].def; c++; }
       for (const t in teams) { teams[t].att /= sa2 / c; teams[t].def /= sd2 / c; }
+      if (useAlt) { // un paso de Newton para cada coeficiente de altitud (con un pequeño ridge hacia 0)
+        let gH = 0, hH = 0, gA = 0, hA = 0; const lam = opts.altRidge == null ? 30 : opts.altRidge;
+        for (const m of ms) { if (!m.x) continue; const H = teams[m.h], A = teams[m.a], lH = muH * Math.exp(bH * m.x) * H.att * A.def, lA = muA * Math.exp(bA * m.x) * A.att * H.def;
+          gH += m.w * m.x * (m.hg - lH); hH += m.w * m.x * m.x * lH; gA += m.w * m.x * (m.ag - lA); hA += m.w * m.x * m.x * lA; }
+        bH += (gH - lam * bH) / (hH + lam); bA += (gA - lam * bA) / (hA + lam);
+        bH = Math.max(-1, Math.min(1, bH)); bA = Math.max(-1, Math.min(1, bA));
+      }
     }
-    return { muH, muA, teams, n: ms.length, asOf };
+    // Ventaja de local propia de cada equipo (altitud, cancha, público): goles a favor y en contra EN CASA frente a lo esperado, encogidos hacia 1
+    let hf = null;
+    if (opts.kHome > 0) {
+      const sF = {}, eF = {}, sA = {}, eA = {}; for (const t in teams) sF[t] = eF[t] = sA[t] = eA[t] = 0;
+      for (const m of ms) { const H = teams[m.h], A = teams[m.a]; sF[m.h] += m.w * m.hg; eF[m.h] += m.w * muH * H.att * A.def; sA[m.h] += m.w * m.ag; eA[m.h] += m.w * muA * A.att * H.def; }
+      hf = {}; for (const t in teams) hf[t] = { f: (sF[t] + opts.kHome * muH) / (eF[t] + opts.kHome * muH), a: (sA[t] + opts.kHome * muA) / (eA[t] + opts.kHome * muA) };
+    }
+    return { muH, muA, teams, n: ms.length, asOf, hf, rho: opts.rho, drawBoost: opts.drawBoost, alt: useAlt ? opts.alt : null, altMode: opts.altMode, bH, bA };
   }
   function predictMatch(fit, home, away, minN) {
     if (!fit) return null;
     const H = fit.teams[home], A = fit.teams[away], need = minN == null ? 6 : minN;
     if (!H || !A || H.n < need || A.n < need) return null;
-    const lh = fit.muH * H.att * A.def, la = fit.muA * A.att * H.def;
-    return Object.assign({ lh, la }, marketsFromMatrix(scoreMatrix(lh, la)));
+    let lh = fit.muH * H.att * A.def, la = fit.muA * A.att * H.def;
+    if (fit.alt) { const x = altX(fit.alt, fit.altMode, home, away); lh *= Math.exp(fit.bH * x); la *= Math.exp(fit.bA * x); }
+    if (fit.hf && fit.hf[home]) { lh *= fit.hf[home].f; la *= fit.hf[home].a; }
+    return Object.assign({ lh, la }, marketsFromMatrix(scoreMatrix(lh, la, fit.rho), fit.drawBoost));
   }
 
   /* ---------- Mercado: mejor cuota, probabilidad justa ---------- */

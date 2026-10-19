@@ -17,6 +17,14 @@
   const cfgOf = (sport) => SPORT[sport] || SPORT.default;
   const isGoals = (sport) => sport === 'soccer';
 
+  /* ---------- Ajustes propios de una liga ---------- */
+  // Liga 1 (Perú): la altitud de la sede local pesa. Un visitante de llanura que juega en Cusco, Huancayo, Juliaca o Tarma rinde peor (goles
+  // del local ×≈1.28 y del visitante ×≈0.87 con 3 km de diferencia, estimado con los datos y validado en cuatro cortes del backtest).
+  // Altitud aproximada de la ciudad sede en km; si falta un equipo, no se aplica efecto (nunca se inventa).
+  const ALT_PERU = { 'ADT': 3.05, 'Academia Cantolao': 0.02, 'Alianza Atlético': 0.06, 'Alianza Lima': 0.15, 'Alianza Universidad': 1.90, 'Atlético Grau': 0.03, 'Ayacucho FC': 2.76, 'Carlos A. Mannucci': 0.03, 'Carlos Stein': 0.03, 'Cienciano del Cusco': 3.40, 'Comerciantes Unidos': 2.60, 'Cusco FC': 3.40, 'César Vallejo': 0.03, 'Deportivo Binacional': 3.83, 'Deportivo Garcilaso': 3.40, 'Deportivo Moquegua': 1.41, 'Deportivo Municipal': 0.15, 'FC Cajamarca': 2.75, 'Juan Pablo II': 0.23, 'Los Chankas': 2.92, 'Melgar': 2.33, 'San Martin': 0.15, 'Sport Boys': 0.02, 'Sport Huancayo': 3.26, 'Sporting Cristal': 0.15, 'UTC': 2.75, 'Universitario': 0.15, 'Unión Comercio': 0.86 };
+  const LEAGUE_OPTS = { 'soccer/per.1': { alt: ALT_PERU, altMode: 'oneSided', altRidge: 30 } };
+  const altDiff = (lg, h, a) => { const o = LEAGUE_OPTS[lg]; return o && o.alt && o.alt[h] != null && o.alt[a] != null ? o.alt[h] - o.alt[a] : null; };
+
   /* ---------- Elo ---------- */
   const expected = (dr) => 1 / (1 + Math.pow(10, -dr / 400));
   // Pretemporada de ligas americanas por fechas (la caché antigua no trae el tipo de temporada)
@@ -130,7 +138,7 @@
     for (const lg in byLg) {
       const sp = sportOf[lg] || lg.split('/')[0];
       if (isGoals(sp) && G && wantsGlobal(lg) && fitView(G, lg)) { ctx.fits[lg] = fitView(G, lg); ctx.global[lg] = true; }
-      else if (isGoals(sp)) ctx.fits[lg] = Mo.fitLeague(byLg[lg].filter((r) => r.hs != null).map((r) => ({ d: r.d, h: r.h, a: r.a, hg: r.hs, ag: r.as })), asOf, { k: 3 });
+      else if (isGoals(sp)) ctx.fits[lg] = Mo.fitLeague(byLg[lg].filter((r) => r.hs != null).map((r) => ({ d: r.d, h: r.h, a: r.a, hg: r.hs, ag: r.as })), asOf, Object.assign({ k: 3 }, LEAGUE_OPTS[lg]));
       else ctx.elo[lg] = eloRun(byLg[lg], sp);
     }
     return ctx;
@@ -157,7 +165,7 @@
         const q = Mo.predictMatch(ctx.fits[ev.lg], ka, kh, 5);
         if (q) { pr.p1x2 = [(pr.p1x2[0] + q.p1x2[2]) / 2, (pr.p1x2[1] + q.p1x2[1]) / 2, (pr.p1x2[2] + q.p1x2[0]) / 2]; pr.ou25 = [(pr.ou25[0] + q.ou25[0]) / 2, (pr.ou25[1] + q.ou25[1]) / 2]; pr.btts = [(pr.btts[0] + q.btts[0]) / 2, (pr.btts[1] + q.btts[1]) / 2]; const lh = (pr.lh + q.la) / 2, la = (pr.la + q.lh) / 2; pr.lh = lh; pr.la = la; }
       }
-      if (pr) { model = pr.p1x2; info = { lh: pr.lh, la: pr.la, ou25: pr.ou25, btts: pr.btts, reliable: true }; }
+      if (pr) { model = pr.p1x2; info = { lh: pr.lh, la: pr.la, ou25: pr.ou25, btts: pr.btts, reliable: true }; const dx = ev.neutral ? null : altDiff(ev.lg, ev.h, ev.a); if (dx != null && dx >= 0.5) info.altDiff = dx; }
     } else {
       const ep = eloProb(ctx.elo[ev.lg], sp, ev.h, ev.a, ev.neutral, (ev.ko || '').slice(0, 10));
       if (ep) { model = [ep.p, 1 - ep.p]; info = { rH: ep.rH, rA: ep.rA, nH: ep.nH, nA: ep.nA, reliable: ep.reliable }; }
@@ -198,6 +206,7 @@
 
   /* ---------- Backtest de aciertos por liga (sin cuotas históricas: mide al modelo contra "gana el local") ---------- */
   function backtestLeague(results, sport, testFrom, collect, fopts) {
+    if (isGoals(sport) && results.length) fopts = Object.assign({}, LEAGUE_OPTS[results[0].lg], fopts); // misma configuración que usa la web
     const rs = results.filter((r) => usable(r, sport)).slice().sort((a, b) => a.d.localeCompare(b.d));
     const test = []; // {p:[...], r: índice real}
     if (isGoals(sport)) {
@@ -276,7 +285,7 @@
     return best && best.o;
   }
 
-  const api = { filterBooksByMarket, isExchange, makeKeyer, normTeam, teamSim, matchEvent, fitGlobal, fitView, backtestGlobal, summarize, isPreseasonDate, isCross, calib, fitTemp, SPORT, cfgOf, isGoals, eloRun, eloProb, expected, marketProbs, buildContext, forecast, backtestLeague };
+  const api = { ALT_PERU, LEAGUE_OPTS, altDiff, filterBooksByMarket, isExchange, makeKeyer, normTeam, teamSim, matchEvent, fitGlobal, fitView, backtestGlobal, summarize, isPreseasonDate, isCross, calib, fitTemp, SPORT, cfgOf, isGoals, eloRun, eloProb, expected, marketProbs, buildContext, forecast, backtestLeague };
   if (typeof module !== 'undefined' && module.exports) module.exports = api;
   root.SLMulti = api;
 })(typeof window !== 'undefined' ? window : globalThis);

@@ -85,3 +85,10 @@ Con 3 301 partidos de prueba, el mercado predice mejor que el modelo (log-loss 0
 - Detalle de evento: cuotas por casa (ESPN/DraftKings + football-data hasta 9 casas unidas por nombre + las del usuario) frente a la cuota justa del pronóstico, EV por celda, mejor cuota, margen y total de goles.
 - 2.ª revisión: FAIL 71/100 → corregidos 1-5, 7-10, 12-18, 20 (caché no se pisa con fallos; ajuste global decidido por comparación pareada: no mejora significativamente → desactivado; homónimos por país; copas domésticas = cruzadas; servidor con lista blanca, Host en GET y enfriamiento de 2 min; avisos de casas de referencia; sin stake; teclado; escritura atómica en Node; frescura = fuente más antigua).
 - Pendiente conocido: #6 calibración con split temporal real, #19 neutral/prórroga en el entrenamiento de fútbol y ligas descartadas (HTTP 400) sin mostrar en la UI; sin tercera revisión.
+
+## Afinado del modelo de la Liga 1 (19-oct-2026)
+Probado con backtest walk-forward sobre ~1 600 partidos (2021-2026), siempre con comparación pareada:
+- ADOPTADO: efecto de altitud compartido entre equipos (sede local vs sede visitante, solo si el local está más alto; ridge 30). Mejora log-loss en 4 cortes (+0,003 a +0,007; 2,2 ee en el corte largo) y +0,013 en partidos con ≥1,5 km de diferencia. Coeficientes: goles local ×1,28 y visita ×0,87 con 3 km. Altitudes aproximadas en `ALT_PERU` (multimodel.js); equipo desconocido = sin efecto.
+- DESCARTADO: ventaja de local por equipo (empeora −0,0007 ±0,0002 en 53 ligas; solo ayuda en 20), ajuste de empates (empeora), rho de Dixon-Coles (sin mejora), mezcla con Elo (−0,002, dentro del ruido tras 30 configuraciones), xi/k (±0,001).
+- Límite: el modelo ya está calibrado (50,3 % local previsto vs 50,3 % real) y mejora 0,08 de log-loss sobre un modelo ingenuo; lo que falta (alineaciones, lesiones, árbitros) no está en los datos gratuitos.
+- Pendiente posible: altitudes de otras ligas (Bolivia, Ecuador, Colombia, México) con el mismo mecanismo.
