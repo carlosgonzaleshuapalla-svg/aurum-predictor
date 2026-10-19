@@ -1,0 +1,28 @@
+# Nunca subir claves, cachés ni datos generados (se regeneran solos)
+tools/.odds_api_key
+data/raw/
+data/raw_espn/
+data/*.json
+data/*.js
+!data/casas_peru.js
+!data/casas_peru.json
+!data/team_aliases.json
+dist/
+dist.zip
+__pycache__/
+*.tmp
+.claude/
+.DS_Store
+
+# El casino de prueba NO tiene licencia: no se sube a ningún repositorio público
+casino.html
+js/app.js
+js/games/
+# Otras claves posibles
+.env*
+*.key
+*.pem
+
+# Documentos del casino de prueba (no forman parte del Predictor público)
+LEDGER.md
+REQUISITOS-LEGALES.md

@@ -1,0 +1,91 @@
+# Publica Aurum Predictor en GitHub Pages y refresca los datos solo, cada 8 horas.
+name: Publicar Aurum Predictor
+
+on:
+  schedule:
+    - cron: "17 */8 * * *"
+  workflow_dispatch: {}
+  push:
+    branches: [main]
+
+permissions:
+  contents: read
+
+concurrency:
+  group: pages
+  cancel-in-progress: false
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    timeout-minutes: 45
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "20"
+      - name: Mes actual (clave de la caché de descargas)
+        id: mes
+        run: echo "m=$(date -u +%Y-%m)" >> "$GITHUB_OUTPUT"
+      - name: Recuperar descargas anteriores (caché)
+        uses: actions/cache/restore@v4
+        with:
+          path: |
+            data/raw
+            data/raw_espn
+          key: descargas-${{ steps.mes.outputs.m }}-${{ github.run_id }}
+          restore-keys: |
+            descargas-${{ steps.mes.outputs.m }}-
+            descargas-
+      - name: Descargar datos (football-data y ESPN)
+        run: |
+          python tools/fetch_data.py
+          python tools/fetch_espn.py
+      - name: Guardar descargas en la caché (aunque algo falle después)
+        if: always()
+        uses: actions/cache/save@v4
+        with:
+          path: |
+            data/raw
+            data/raw_espn
+          key: descargas-${{ steps.mes.outputs.m }}-${{ github.run_id }}
+      - name: Cuotas de The Odds API (opcional)
+        if: ${{ vars.PUBLICAR_ODDS_API == 'true' }}   # sin secret, la herramienta se omite sola
+        env:
+          ODDS_API_KEY: ${{ secrets.ODDS_API_KEY }}
+          ODDS_API_MAX_CREDITS: ${{ vars.ODDS_API_CREDITS_PER_RUN || '5' }}   # plan gratis: 5 × 3 corridas/día ≈ 450 de 500 créditos/mes
+        run: python tools/fetch_odds_api.py
+      - name: Backtests y comprobaciones
+        run: |
+          node tools/backtest.js
+          node tools/backtest_multi.js
+          node tests/gate.js
+      - name: Armar el sitio (solo lo publicable)
+        env:
+          PUB_ODDS: ${{ vars.PUBLICAR_ODDS_API }}
+          PUB_CON_DK: ${{ vars.PUBLICAR_CON_DRAFTKINGS }}
+        run: |
+          ARGS="--no-zip"
+          if [ "$PUB_ODDS" = "true" ]; then ARGS="$ARGS --with-odds-api"; fi
+          if [ "$PUB_CON_DK" = "true" ]; then ARGS="$ARGS --con-draftkings"; fi
+          python tools/build_site.py $ARGS
+      - uses: actions/configure-pages@v5
+      - uses: actions/upload-pages-artifact@v3
+        with:
+          path: dist
+
+  deploy:
+    needs: build
+    runs-on: ubuntu-latest
+    permissions:
+      pages: write
+      id-token: write
+    environment:
+      name: github-pages
+      url: ${{ steps.deployment.outputs.page_url }}
+    steps:
+      - id: deployment
+        uses: actions/deploy-pages@v4

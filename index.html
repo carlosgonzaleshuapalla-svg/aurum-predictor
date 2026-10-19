@@ -1,0 +1,53 @@
+<!doctype html>
+<html lang="es">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Aurum Predictor · Pronósticos por deporte</title>
+  <meta name="description" content="Compara cuotas y probabilidades de eventos deportivos con análisis estadístico. No es una recomendación ni acepta apuestas.">
+  <meta name="theme-color" content="#08080a">
+  <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'%3E%3Crect width='32' height='32' rx='8' fill='%2308080a'/%3E%3Ccircle cx='16' cy='16' r='6' fill='%23cc9166'/%3E%3C/svg%3E">
+  <link rel="stylesheet" href="css/styles.css">
+  <link rel="stylesheet" href="css/predictor.css">
+</head>
+<body>
+  <header class="top">
+    <div class="top-in">
+      <a class="logo" href="#/" aria-label="Aurum Predictor, inicio"><i></i>Aurum<span class="logo-sub">Predictor</span></a>
+      <nav class="main" id="nav" aria-label="Principal">
+        <a href="#/" data-r="home">Pronósticos</a>
+        <a href="#/valor" data-r="valor">Valor</a>
+        <a href="#/partidos" data-r="partidos">Partidos</a>
+        <a href="#/combinadas" data-r="combinadas">Combinadas</a>
+        <a href="#/modelo" data-r="modelo">Modelo y backtest</a>
+        <a href="#/cuotas" data-r="cuotas">Mis cuotas</a>
+      </nav>
+      <div class="top-actions"><span class="tag" id="fresh" title="Antigüedad de los datos">cargando…</span><button class="btn btn-ghost" id="refresh" style="padding:6px 14px" title="Descarga cuotas, calendarios y resultados nuevos">Actualizar datos</button></div>
+      <button class="icon-btn menu-btn" id="menu" aria-label="Menú" aria-expanded="false">☰</button>
+    </div>
+  </header>
+
+  <div class="safebar"><span><b>18+</b> · Herramienta de análisis, no recomendación ni garantía de ganancia. Juega solo en casas autorizadas por MINCETUR; si el juego te afecta, busca ayuda profesional y usa los límites y la autoexclusión de tu casa. <b>Los juegos y apuestas deportivas a distancia realizados en exceso pueden causar ludopatía.</b></span></div>
+
+  <main id="view"><div class="wrap pg"><p class="muted">Cargando datos…</p></div></main>
+
+  <footer class="foot">
+    <div class="wrap">
+      <p class="legal"><b>Aviso:</b> Aurum Predictor es una herramienta de análisis estadístico. <b>No acepta apuestas, no mueve dinero y no garantiza resultados.</b> Las casas incluyen un margen y los mercados son muy eficientes: la mayoría de apostadores pierde a largo plazo. Un modelo con "ventaja" puede estar equivocado. No juegues más de lo que puedas permitirte perder, solo si eres mayor de 18 y solo en casas autorizadas por MINCETUR. Jugar en exceso puede causar ludopatía. Datos: football-data.co.uk (cuotas de fútbol) y la API pública no oficial de ESPN (calendarios, resultados y cuotas de referencia de DraftKings), sin afiliación con ninguna de ellas; son datos de terceros, sin garantía, que pueden cambiar o dejar de funcionar. Opcional: The Odds API con clave propia. <b>Privacidad:</b> esta web no pide cuenta ni recoge datos personales; lo que guardas (filtros, cuotas que añades) queda solo en tu navegador. El alojamiento web y Google Fonts (tipografías) pueden registrar tu dirección IP al cargar la página. <a href="casino.html" style="text-decoration:underline">Prototipo anterior del casino</a>.</p>
+    </div>
+  </footer>
+
+  <script src="js/model.js?v=17"></script>
+  <script src="js/multimodel.js?v=17"></script>
+  <script src="js/math.js"></script>
+  <script src="js/core.js"></script>
+  <script>
+    // Los datos se recargan siempre (sin caché) para ver lo último que dejó tools/fetch_*.py
+    ['history', 'fixtures', 'backtest', 'multi', 'backtest_multi', 'casas_peru', 'odds_api'].forEach(function (n) {
+      document.write('<script src="data/' + n + '.js?t=' + Date.now() + '" onerror="window.__noData=' + (n === 'history' || n === 'fixtures' ? 'true' : 'false') + '"><\/script>');
+    });
+  </script>
+  <script src="js/pronosticos.js?v=17"></script>
+  <script src="js/predictor.js?v=17"></script>
+</body>
+</html>
