@@ -15,7 +15,7 @@ INDEX = """<html><head><title>x</title></head><body>
 </body></html>"""
 
 
-def tree(root, with_key="CLAVEDEPRUEBA0123456789abcdef"):
+def tree(root, with_key="CLAVEDEPRUEBA0123456789abcdef", ads=""):
     def w(rel, txt="x"):
         p = os.path.join(root, rel)
         os.makedirs(os.path.dirname(p), exist_ok=True)
@@ -25,6 +25,10 @@ def tree(root, with_key="CLAVEDEPRUEBA0123456789abcdef"):
     for rel in bs.PUBLIC_FILES:
         if rel == "data/multi.js":
             w(rel, 'window.AURUM_MULTI_PACKED = {"events":[],"results":[]};\n')
+        elif rel == "privacidad.html":
+            w(rel, "<html><head><title>p</title></head><body>p</body></html>")
+        elif rel == "js/ads.js":
+            w(rel, "var CLIENT = '%s';" % ads)
         elif rel != "index.html":
             w(rel, "// ok")
     # cosas que NO deben publicarse
@@ -37,7 +41,7 @@ def tree(root, with_key="CLAVEDEPRUEBA0123456789abcdef"):
 class BuildTests(unittest.TestCase):
     def build(self, **kw):
         d = tempfile.mkdtemp()
-        tree(d, kw.pop("key", "CLAVEDEPRUEBA0123456789abcdef"))
+        tree(d, kw.pop("key", "CLAVEDEPRUEBA0123456789abcdef"), kw.pop("ads", ""))
         out = bs.build(d, os.path.join(d, "dist"), stamp="TEST", log=lambda *_: None, **kw)
         return d, out
 
@@ -149,6 +153,33 @@ class BuildTests(unittest.TestCase):
         with open(os.path.join(out, "_headers")) as f:
             t = f.read()
         self.assertIn("Content-Security-Policy", t); self.assertIn("frame-ancestors 'none'", t); self.assertIn("/data/*", t)
+
+
+    def test_ads_off_by_default(self):
+        _, out = self.build()
+        self.assertNotIn("ads.txt", self.files(out))
+        with open(os.path.join(out, "index.html"), encoding="utf-8") as f:
+            h = f.read()
+        self.assertNotIn("googlesyndication", h)
+        self.assertNotIn("adsense", h.lower(), "sin ID no hay nada de AdSense en la CSP ni en el <meta>")
+        with open(os.path.join(out, "_headers"), encoding="utf-8") as f:
+            self.assertNotIn("googlesyndication", f.read())
+
+    def test_ads_on_adds_txt_meta_and_csp(self):
+        _, out = self.build(ads="ca-pub-1234567890123456")
+        with open(os.path.join(out, "ads.txt"), encoding="utf-8") as f:
+            self.assertEqual(f.read().strip(), "google.com, pub-1234567890123456, DIRECT, f08c47fec0942fa0")
+        for page in ("index.html", "privacidad.html"):
+            with open(os.path.join(out, page), encoding="utf-8") as f:
+                h = f.read()
+            self.assertIn('<meta name="google-adsense-account" content="ca-pub-1234567890123456">', h)
+            self.assertIn("googlesyndication.com", h)
+        with open(os.path.join(out, "_headers"), encoding="utf-8") as f:
+            self.assertIn("googlesyndication", f.read())
+
+    def test_bad_ads_id_fails(self):
+        with self.assertRaises(SystemExit):
+            self.build(ads="pub-123")
 
 
 if __name__ == "__main__":

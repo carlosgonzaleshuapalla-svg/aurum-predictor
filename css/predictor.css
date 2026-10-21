@@ -69,3 +69,16 @@
 .modal-body > * { min-width: 0; }
 .modal .table-wrap { max-width: 100%; }
 @media (max-width: 600px) { .modal-head h3 { font-size: 22px; } .modal-head, .modal-body { padding-left: 16px; padding-right: 16px; } }
+
+/* Aviso de cookies de publicidad (solo aparece si hay anuncios configurados) y página de privacidad */
+#cookie-bar { position: fixed; left: 12px; right: 12px; bottom: 12px; z-index: 50; max-width: 760px; margin: 0 auto; background: var(--carbon); border: 1px solid var(--slate); border-radius: var(--r-card); padding: 14px 16px; display: flex; gap: 14px; align-items: center; flex-wrap: wrap; font-size: 13px; color: var(--silver); box-shadow: 0 8px 30px rgba(0,0,0,.5); }
+#cookie-bar p { flex: 1 1 280px; min-width: 0; }
+#cookie-bar a { text-decoration: underline; }
+#cookie-bar .cookie-btns { display: flex; gap: 8px; flex: 0 0 auto; }
+#cookie-bar .btn { padding: 9px 18px; }
+.legal-page { max-width: 760px; }
+.legal-page h1 { font: 400 32px/1.2 var(--serif); margin: 8px 0 6px; }
+.legal-page h2 { font: 500 18px/1.3 var(--sans); margin: 26px 0 8px; color: var(--white); }
+.legal-page p, .legal-page li { color: var(--silver); font-size: 15px; margin-bottom: 8px; }
+.legal-page ul { padding-left: 20px; }
+.legal-page a { text-decoration: underline; }

@@ -25,24 +25,53 @@ import zipfile
 ROOT = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 
 PUBLIC_FILES = [
-    "index.html", "css/styles.css", "css/predictor.css",
-    "js/model.js", "js/multimodel.js", "js/math.js", "js/core.js", "js/pronosticos.js", "js/predictor.js",
+    "index.html", "privacidad.html", "css/styles.css", "css/predictor.css",
+    "js/model.js", "js/multimodel.js", "js/math.js", "js/core.js", "js/pronosticos.js", "js/predictor.js", "js/ads.js",
     "data/history.js", "data/fixtures.js", "data/backtest.js", "data/backtest_multi.js", "data/multi.js", "data/casas_peru.js",
 ]
 OPTIONAL = {"data/odds_api.js": "--with-odds-api"}
 
-HEADERS = """/*
+# Orígenes de Google que AdSense necesita; solo se añaden a la CSP si js/ads.js tiene un ID de editor válido.
+ADS_HOSTS = "https://*.googlesyndication.com https://*.google.com https://*.doubleclick.net https://*.googleadservices.com https://*.googletagservices.com https://*.adtrafficquality.google https://*.gstatic.com"
+ADS_CLIENT_RE = re.compile(r"var CLIENT = '([^']*)';")
+ADS_VALID = re.compile(r"^ca-pub-\d{10,20}$")
+
+
+def csp(client=""):
+    ads = " " + ADS_HOSTS if client else ""
+    return ("default-src 'self'; script-src 'self' 'unsafe-inline'%s; style-src 'self' 'unsafe-inline' https://fonts.googleapis.com; "
+            "font-src https://fonts.gstatic.com; img-src 'self' data:%s; connect-src 'self'%s%s"
+            % (ads, " https:" if client else "", ads, "; frame-src" + ads if client else ""))
+
+
+def headers(client=""):
+    return """/*
   X-Content-Type-Options: nosniff
   Referrer-Policy: no-referrer
   X-Frame-Options: DENY
-  Content-Security-Policy: default-src 'self'; script-src 'self' 'unsafe-inline'; style-src 'self' 'unsafe-inline' https://fonts.googleapis.com; font-src https://fonts.gstatic.com; img-src 'self' data:; connect-src 'self'; frame-ancestors 'none'
+  Content-Security-Policy: %s; frame-ancestors 'none'
 /data/*
   Cache-Control: public, max-age=600
 /js/*
   Cache-Control: public, max-age=3600
 /css/*
   Cache-Control: public, max-age=3600
-"""
+""" % csp(client)
+
+
+def ads_client(root):
+    """ID de editor de AdSense escrito en js/ads.js ('' = anuncios desactivados). Un ID mal escrito falla en vez de ignorarse."""
+    p = os.path.join(root, "js", "ads.js")
+    if not os.path.exists(p):
+        return ""
+    with open(p, encoding="utf-8") as f:
+        m = ADS_CLIENT_RE.search(f.read())
+    cid = m.group(1).strip() if m else ""
+    if cid and not ADS_VALID.match(cid):
+        raise SystemExit("El ID de AdSense en js/ads.js no tiene el formato ca-pub-0000000000000000: %r" % cid)
+    return cid
+
+
 ROBOTS = "User-agent: *\nAllow: /\n"
 
 # Cosas que jamás deben aparecer en lo publicado (nombres de archivo y texto)
@@ -54,12 +83,7 @@ def stamp_now():
     return dt.datetime.now(dt.timezone.utc).strftime("%Y%m%d%H%M")
 
 
-CSP_META = ('<meta http-equiv="Content-Security-Policy" content="default-src \'self\'; script-src \'self\' \'unsafe-inline\'; '
-            'style-src \'self\' \'unsafe-inline\' https://fonts.googleapis.com; font-src https://fonts.gstatic.com; img-src \'self\' data:; '
-            'connect-src \'self\'">')
-
-
-def transform_index(html, stamp, with_odds_api=False, con_dk=False):
+def transform_index(html, stamp, with_odds_api=False, con_dk=False, client=""):
     """Adapta index.html para internet: sin enlace al casino, versión de caché fija (no Date.now()), CSP también en GitHub Pages
     (que ignora _headers) y sin pedir archivos que no se publican."""
     html = re.sub(r'\s*<a href="casino\.html"[^>]*>[^<]*</a>\.?', "", html)
@@ -72,7 +96,10 @@ def transform_index(html, stamp, with_odds_api=False, con_dk=False):
         html = html.replace("(calendarios, resultados y cuotas de referencia de DraftKings)", "(calendarios y resultados)")
     if "Content-Security-Policy" not in html:
         if "<head>" in html:
-            html = html.replace("<head>", "<head>\n  " + CSP_META, 1)
+            meta = '<meta http-equiv="Content-Security-Policy" content="%s">' % csp(client).replace('"', "&quot;")
+            if client:   # verificación de AdSense: no carga nada, solo identifica el sitio
+                meta += '\n  <meta name="google-adsense-account" content="%s">' % client
+            html = html.replace("<head>", "<head>\n  " + meta, 1)
         else:
             raise SystemExit("index.html no tiene <head>: no se puede añadir la política de seguridad (CSP)")
     return html
@@ -104,6 +131,7 @@ def build(root, out, with_odds_api=False, stamp=None, log=print, con_draftkings=
             shutil.rmtree(stale)
         elif os.path.exists(stale):
             os.remove(stale)
+    client = ads_client(root)
     files = list(PUBLIC_FILES) + [f for f in OPTIONAL if with_odds_api]
     missing = []
     for rel in files:
@@ -114,9 +142,9 @@ def build(root, out, with_odds_api=False, stamp=None, log=print, con_draftkings=
             continue
         dst = os.path.join(out, rel)
         os.makedirs(os.path.dirname(dst), exist_ok=True)
-        if rel == "index.html":
+        if rel in ("index.html", "privacidad.html"):
             with open(src, encoding="utf-8") as f:
-                html = transform_index(f.read(), stamp, with_odds_api, con_draftkings)
+                html = transform_index(f.read(), stamp, with_odds_api, con_draftkings, client)
             with open(dst, "w", encoding="utf-8") as f:
                 f.write(html)
         else:
@@ -125,7 +153,10 @@ def build(root, out, with_odds_api=False, stamp=None, log=print, con_draftkings=
                 strip_draftkings(dst)
     if missing:
         raise SystemExit("Faltan datos para publicar: %s\nEjecuta primero: python3 tools/fetch_data.py && python3 tools/fetch_espn.py && node tools/backtest.js && node tools/backtest_multi.js" % ", ".join(missing))
-    for name, text in (("_headers", HEADERS), ("robots.txt", ROBOTS), (".nojekyll", "")):
+    extra = [("_headers", headers(client)), ("robots.txt", ROBOTS), (".nojekyll", "")]
+    if client:   # ads.txt: Google lo exige en la raíz del dominio para pagar los anuncios
+        extra.append(("ads.txt", "google.com, %s, DIRECT, f08c47fec0942fa0\n" % client.replace("ca-", "", 1)))
+    for name, text in extra:
         with open(os.path.join(out, name), "w", encoding="utf-8") as f:
             f.write(text)
     problems = audit(root, out)
@@ -148,7 +179,7 @@ def audit(root, out):
         for fn in fns:
             full = os.path.join(dp, fn)
             rel = os.path.relpath(full, out).replace(os.sep, "/")
-            if rel not in ("_headers", "robots.txt", ".nojekyll") and FORBIDDEN_PATHS.search(rel):
+            if rel not in ("_headers", "robots.txt", ".nojekyll", "ads.txt") and FORBIDDEN_PATHS.search(rel):
                 problems.append("archivo no permitido: " + rel)
                 continue
             if not rel.endswith((".html", ".js", ".css", ".txt", "_headers")):
@@ -182,7 +213,8 @@ def main(argv=None):
     a = ap.parse_args(argv)
     out = build(ROOT, os.path.join(ROOT, a.out), a.with_odds_api, con_draftkings=a.con_draftkings)
     size = sum(os.path.getsize(os.path.join(dp, f)) for dp, _, fs in os.walk(out) for f in fs) / 1e6
-    print("Listo: %s (%.1f MB sin comprimir; los hosts lo comprimen ~4×). Auditoría OK: sin casino, sin claves, sin herramientas, %s." % (os.path.relpath(out, ROOT), size, "con cuotas de DraftKings" if a.con_draftkings else "sin cuotas de DraftKings"))
+    print("Listo: %s (%.1f MB sin comprimir; los hosts lo comprimen ~4×). Auditoría OK: sin casino, sin claves, sin herramientas, %s%s." % (os.path.relpath(out, ROOT), size, "con cuotas de DraftKings" if a.con_draftkings else "sin cuotas de DraftKings",
+          ", anuncios AdSense ACTIVADOS (%s)" % ads_client(ROOT) if ads_client(ROOT) else ", sin anuncios"))
     if not a.no_zip:
         print("También: %s (para subir como .zip)" % os.path.relpath(make_zip(out), ROOT))
     return 0
