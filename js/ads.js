@@ -4,7 +4,7 @@
    verificación y a la política de seguridad (CSP). El ID de editor es público: no es una clave secreta. */
 (function () {
   'use strict';
-  var CLIENT = '';
+  var CLIENT = 'ca-pub-3378708786504274';
   var KEY = 'aurum_cookies_v1';
   var VALID = /^ca-pub-\d{10,20}$/;
 
