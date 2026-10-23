@@ -144,7 +144,7 @@ if (fs.existsSync(hp) && fs.existsSync(fp)) {
   ok(H.matches.every((m) => m.d && m.lg && m.h && m.a && Number.isInteger(m.hg) && Number.isInteger(m.ag)), 'histórico: campos obligatorios');
   ok(H.matches.every((m, i) => i === 0 || H.matches[i - 1].d <= m.d), 'histórico ordenado por fecha');
   ok(H.matches.every((m) => !m.o || Object.values(m.o).every((a) => a.every((x) => x > 1))), 'histórico: cuotas > 1');
-  ok(F.events.length > 0 && F.events.every((e) => e.id && e.ko && e.h && e.a && Object.keys(e.books).length), 'fixtures: ' + F.events.length + ' eventos con casas');
+  ok(F.events.every((e) => e.id && e.ko && e.h && e.a && Object.keys(e.books).length), 'fixtures: ' + F.events.length + ' eventos con casas' + (F.events.length ? '' : ' (ninguno ahora: válido, p. ej. parón de selecciones)'));
   ok(F.events.every((e) => Object.values(e.books).every((b) => !b['1x2'] || b['1x2'].every((x) => x > 1))), 'fixtures: cuotas > 1');
   const known = new Set(H.matches.flatMap((m) => [m.lg + '|' + m.h, m.lg + '|' + m.a]));
   const miss = F.events.flatMap((e) => [e.h, e.a].filter((t) => !known.has(e.lg + '|' + t)).map((t) => e.lg + ':' + t));
