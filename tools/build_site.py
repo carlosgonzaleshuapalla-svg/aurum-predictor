@@ -72,7 +72,8 @@ def ads_client(root):
     return cid
 
 
-ROBOTS = "User-agent: *\nAllow: /\n"
+SITE_URL = "https://aurum-predictor.com"
+ROBOTS = "User-agent: *\nAllow: /\n\nSitemap: %s/sitemap.xml\n" % SITE_URL
 
 # Cosas que jamás deben aparecer en lo publicado (nombres de archivo y texto)
 FORBIDDEN_PATHS = re.compile(r"(casino|/games/|\.odds_api_key|(^|/)tools/|(^|/)tests/|/raw|\.tmp$|(^|/)\.[^/]+$|\.json$|\.py$|node_modules)", re.I)

@@ -91,6 +91,8 @@ catch (e) { ok(false, 'tests/model.test.js\n' + e.stdout.toString().split('\n').
 console.log('[5b] Modelo multi-deporte');
 try { cp.execFileSync('node', [path.join(__dirname, 'multi.test.js')], { stdio: 'pipe' }); ok(true, 'tests/multi.test.js'); }
 catch (e) { ok(false, 'tests/multi.test.js\n' + e.stdout.toString().split('\n').filter((l) => l.includes('✗')).join('\n')); }
+try { cp.execFileSync('node', [path.join(__dirname, 'seo.test.js')], { stdio: 'pipe' }); ok(true, 'tests/seo.test.js'); }
+catch (e) { ok(false, 'tests/seo.test.js\n' + e.stdout.toString().split('\n').filter((l) => l.includes('✗')).join('\n')); }
 
 console.log('[5c] Datos multi-deporte (si existen)');
 const mp = path.join(root, 'data', 'multi.json');

@@ -165,12 +165,17 @@
           const lgsOf = Array.from(new Set(evs.filter(inSport).map((e) => e.lg))).sort((a, b) => (isPeru(b) - isPeru(a)) || lgById[a].name.localeCompare(lgById[b].name));
           if (S.mlg !== 'all' && !lgsOf.includes(S.mlg)) S.mlg = 'all';
           const cnt = (s) => evs.filter((e) => s === 'all' || spOf(e) === s).length;
-          top.append(h('div', { class: 'leagues', style: 'margin-top:32px' }, [['all', 'Todos los deportes']].concat(sports.map((s) => [s, spName(s)])).map(([s, l]) => h('button', { class: 'pill' + (S.sport === s ? ' on' : ''), onclick: () => { S.sport = s; S.mlg = 'all'; saveUI(); render(); } }, l + ' · ' + cnt(s)))));
-          top.append(h('div', { class: 'leagues', style: 'margin-top:10px' }, [['all', 'Todas las ligas']].concat(lgsOf.map((l) => [l, (isPeru(l) ? '🇵🇪 ' : '') + lgById[l].name])).map(([l, n]) => h('button', { class: 'pill' + (S.mlg === l ? ' on' : ''), onclick: () => { S.mlg = l; saveUI(); render(); } }, n + (l === 'all' ? '' : ' · ' + evs.filter((e) => e.lg === l).length)))));
+          // listas desplegables en lugar de una fila de botones por cada opción
+          const dd = (label, opts, cur, pick) => { const sel = h('select', { class: 'inp', 'aria-label': label, onchange: (ev) => pick(ev.target.value) }, opts.map(([v, t]) => h('option', { value: v }, t))); sel.value = cur; return SL.ui.field(label, sel); };
+          const sportOpts = [['all', 'Todos los deportes · ' + cnt('all')]].concat(sports.map((s) => [s, spName(s) + ' · ' + cnt(s)]));
+          const lgOpts = [['all', 'Todas las ligas · ' + evs.filter(inSport).length]].concat(lgsOf.map((l) => [l, (isPeru(l) ? '🇵🇪 ' : '') + lgById[l].name + ' · ' + evs.filter((e) => e.lg === l).length]));
           const q = h('input', { class: 'search', type: 'search', placeholder: 'Buscar equipo o peleador', value: S.q || '', oninput: (ev) => { S.q = ev.target.value; list.replaceChildren(); fill(); } });
-          const when = h('div', { class: 'leagues' }, [['today', 'Hoy'], ['48', '48 horas'], ['week', 'Semana']].map(([k, l]) => h('button', { class: 'pill' + (S.when === k ? ' on' : ''), onclick: () => { S.when = k; saveUI(); render(); } }, l)));
-          const sort = h('div', { class: 'leagues' }, [['time', 'Por hora'], ['conf', 'Por probabilidad']].map(([k, l]) => h('button', { class: 'pill' + (S.sort === k ? ' on' : ''), onclick: () => { S.sort = k; saveUI(); render(); } }, l)));
-          top.append(h('div', { class: 'filters' }, SL.ui.field('Cuándo', when), SL.ui.field('Orden', sort), SL.ui.field('Buscar', q)));
+          top.append(h('div', { class: 'filters' },
+            dd('Deporte', sportOpts, S.sport, (v) => { S.sport = v; S.mlg = 'all'; saveUI(); render(); }),
+            dd('Liga', lgOpts, S.mlg, (v) => { S.mlg = v; saveUI(); render(); }),
+            dd('Cuándo', [['today', 'Hoy'], ['48', '48 horas'], ['week', 'Semana']], S.when, (v) => { S.when = v; saveUI(); render(); }),
+            dd('Orden', [['time', 'Por hora'], ['conf', 'Por probabilidad']], S.sort, (v) => { S.sort = v; saveUI(); render(); }),
+            SL.ui.field('Buscar', q)));
           fill();
         };
         function filtered() {

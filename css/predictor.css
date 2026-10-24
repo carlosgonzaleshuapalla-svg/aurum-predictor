@@ -10,7 +10,10 @@
 .filters .field { min-width: 130px; }
 .filters .field label { margin-bottom: 6px; }
 .filters .inp { padding: 8px 14px; font-size: 14px; }
-.filters select.inp { appearance: none; }
+.filters select.inp { appearance: none; -webkit-appearance: none; padding-right: 34px; max-width: 100%; background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='8' viewBox='0 0 12 8'%3E%3Cpath d='M1 1l5 5 5-5' fill='none' stroke='%23acafb9' stroke-width='1.6'/%3E%3C/svg%3E"); background-repeat: no-repeat; background-position: right 14px center; cursor: pointer; }
+.filters select.inp option { background: var(--carbon); color: var(--white); }
+.filters .field { flex: 1 1 200px; }
+.filters .field .search { width: 100%; }
 .leagues { display: flex; flex-wrap: wrap; gap: 8px; }
 .sec-t { display: flex; justify-content: space-between; align-items: baseline; gap: 16px; flex-wrap: wrap; margin: 40px 0 14px; }
 .rowlink { cursor: pointer; }
@@ -82,3 +85,5 @@
 .legal-page p, .legal-page li { color: var(--silver); font-size: 15px; margin-bottom: 8px; }
 .legal-page ul { padding-left: 20px; }
 .legal-page a { text-decoration: underline; }
+.legal-page.seo-page { max-width: 960px; }
+.seo-page .tbl td.r, .seo-page .tbl th.r { text-align: right; }

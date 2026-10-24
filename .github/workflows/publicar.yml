@@ -72,6 +72,9 @@ jobs:
           if [ "$PUB_ODDS" = "true" ]; then ARGS="$ARGS --with-odds-api"; fi
           if [ "$PUB_CON_DK" = "true" ]; then ARGS="$ARGS --con-draftkings"; fi
           python tools/build_site.py $ARGS
+      - name: Páginas por liga, sitemap y robots (para buscadores)
+        continue-on-error: true   # si esto falla, la web principal se publica igual
+        run: node tools/build_seo.js
       - uses: actions/configure-pages@v5
       - uses: actions/upload-pages-artifact@v3
         with:
