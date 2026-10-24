@@ -38,6 +38,9 @@ function limaWhen(iso) {
   return new Date(iso).toLocaleString('es-PE', { timeZone: 'America/Lima', weekday: 'short', day: '2-digit', month: 'short', hour: '2-digit', minute: '2-digit', hour12: false });
 }
 
+const limaYMD = (iso) => new Date(iso).toLocaleDateString('en-CA', { timeZone: 'America/Lima' });
+const limaLong = (ymd) => new Date(ymd + 'T12:00:00Z').toLocaleDateString('es-PE', { timeZone: 'UTC', weekday: 'long', day: 'numeric', month: 'long', year: 'numeric' });
+
 function leagueSlugs(leagues) {
   const used = {}, out = {};
   for (const l of leagues) {
@@ -84,12 +87,14 @@ function shell(opts) {
     '  <meta property="og:type" content="website"><meta property="og:locale" content="es_PE"><meta property="og:site_name" content="Aurum Predictor">\n' +
     '  <meta property="og:title" content="' + esc(opts.title) + '"><meta property="og:description" content="' + esc(opts.desc) + '"><meta property="og:url" content="' + esc(opts.canonical) + '">\n' +
     '  <link rel="stylesheet" href="' + up + opts.css[0] + '">\n  <link rel="stylesheet" href="' + up + opts.css[1] + '">\n' +
-    '  <script type="application/ld+json">' + JSON.stringify(ld).replace(/</g, '\\u003c') + '</script>\n</head>\n<body>\n' +
+    '  <script type="application/ld+json">' + JSON.stringify(ld).replace(/</g, '\\u003c') + '</script>\n' +
+    (opts.extraLd ? '  <script type="application/ld+json">' + JSON.stringify(opts.extraLd).replace(/</g, '\\u003c') + '</script>\n' : '') + '</head>\n<body>\n' +
     '  <header class="top"><div class="top-in"><a class="logo" href="' + up + '" aria-label="Aurum Predictor, inicio"><i></i>Aurum<span class="logo-sub">Predictor</span></a>' +
-    '<nav class="main" aria-label="Principal"><a href="' + up + '">Pronósticos</a><a href="' + up + 'ligas/">Ligas</a></nav></div></header>\n' +
+    '<nav class="main" aria-label="Principal"><a href="' + up + '">Pronósticos</a><a href="' + up + 'pronosticos-hoy/">Hoy</a><a href="' + up + 'pronosticos-manana/">Mañana</a><a href="' + up + 'ligas/">Ligas</a></nav></div></header>\n' +
     '  <div class="safebar"><span><b>18+</b> · Herramienta de análisis, no recomendación ni garantía de ganancia. Juega solo en casas autorizadas por MINCETUR; si el juego te afecta, busca ayuda profesional y usa los límites y la autoexclusión de tu casa. <b>Los juegos y apuestas deportivas a distancia realizados en exceso pueden causar ludopatía.</b></span></div>\n' +
     '  <main><div class="wrap pg legal-page seo-page">\n' + opts.body + '\n  </div></main>\n' +
     '  <footer class="foot"><div class="wrap"><p class="legal"><b>Aviso:</b> Aurum Predictor es una herramienta de análisis estadístico. <b>No acepta apuestas, no mueve dinero y no garantiza resultados.</b> Las probabilidades son estimaciones de un modelo y pueden estar equivocadas; las casas incluyen un margen y la mayoría de apostadores pierde a largo plazo. Datos de terceros (ESPN y football-data.co.uk), sin afiliación ni garantía. ' +
+    '<a href="' + up + 'pronosticos-hoy/" style="text-decoration:underline">Pronósticos de hoy</a> · <a href="' + up + 'pronosticos-manana/" style="text-decoration:underline">de mañana</a> · <a href="' + up + 'ligas/" style="text-decoration:underline">Ligas</a> · '+
     '<a href="' + up + 'privacidad.html" style="text-decoration:underline">Privacidad y cookies</a> · <a href="#" id="cookie-settings" hidden style="text-decoration:underline">Cookies</a></p></div></footer>\n' +
     '  <script src="' + up + opts.adsJs + '"></script>\n</body>\n</html>\n';
 }
@@ -109,10 +114,11 @@ function leaguePage(lg, ctxIn) {
   body += '<h2>Próximos partidos y pronóstico</h2>\n';
   const rows = [];
   for (const e of evs.slice(0, 20)) {
-    const f = X.forecast(sctx, e, { wModel: 0, temp: BTM._temp });
-    if (!f) { rows.push('<tr><td>' + esc(e.h + ' – ' + e.a) + '</td><td style="white-space:nowrap">' + esc(limaWhen(e.ko)) + '</td><td colspan="3" class="muted">Sin pronóstico: datos insuficientes</td></tr>'); continue; }
+    const f = ctxIn.fcMap[e.id], url = ctxIn.matchUrl[e.id];
+    const name = url ? '<a href="../../partidos/' + url + '/" style="text-decoration:underline">' + esc(e.h + ' – ' + e.a) + '</a>' : esc(e.h + ' – ' + e.a);
+    if (!f) { rows.push('<tr><td>' + name + '</td><td>' + esc(limaWhen(e.ko)) + '</td><td colspan="3" class="muted">Sin pronóstico: datos insuficientes</td></tr>'); continue; }
     const pk = f.pick;
-    rows.push('<tr><td>' + esc(e.h + ' – ' + e.a) + '</td><td style="white-space:nowrap">' + esc(limaWhen(e.ko)) + '</td><td><b>' + esc(pk.label) + '</b><br><small class="muted">' + esc(CONF[pk.conf] || '') + '</small></td><td class="r">' + pct(pk.p) + '</td><td class="r">' + odd(pk.fairOdds) + '</td></tr>');
+    rows.push('<tr><td>' + name + '</td><td style="white-space:nowrap">' + esc(limaWhen(e.ko)) + '</td><td><b>' + esc(pk.label) + '</b><br><small class="muted">' + esc(CONF[pk.conf] || '') + '</small></td><td class="r">' + pct(pk.p) + '</td><td class="r">' + odd(pk.fairOdds) + '</td></tr>');
   }
   if (rows.length) body += '<div class="table-wrap"><table class="tbl"><thead><tr><th>Partido</th><th>Hora (Lima)</th><th>Pronóstico</th><th class="r">Probabilidad</th><th class="r">Cuota justa</th></tr></thead><tbody>' + rows.join('') + '</tbody></table></div>\n';
   else body += '<p class="muted">No hay partidos programados en los próximos días (pausa de la liga o calendario aún no publicado). Esta página se actualiza sola cuando haya.</p>\n';
@@ -133,6 +139,65 @@ function leaguePage(lg, ctxIn) {
   const desc = ('Pronósticos de ' + lg.name + ': probabilidad de cada resultado y cuota justa para los próximos partidos, forma reciente y acierto histórico del modelo.').slice(0, 158);
   return shell({ title: 'Pronósticos ' + lg.name + ' · cuota justa y probabilidades | Aurum Predictor', desc, canonical: SITE + '/ligas/' + slugs[lg.id] + '/', depth: 2, ...head,
     crumbs: [['Inicio', SITE + '/'], ['Ligas', SITE + '/ligas/'], [lg.name, SITE + '/ligas/' + slugs[lg.id] + '/']], body });
+}
+
+
+function lastGames(res, team, n) {
+  return res.filter((r) => r.h === team || r.a === team).slice(-n).reverse().map((r) => {
+    const home = r.h === team, opp = home ? r.a : r.h;
+    let res_ = r.w === (home ? 'h' : 'a') ? 'G' : r.w === 'd' ? 'E' : 'P';
+    const sc = r.hs != null && r.as != null ? (home ? r.hs + '-' + r.as : r.as + '-' + r.hs) : '';
+    return '<li>' + esc(r.d) + ' · <b>' + res_ + '</b> ' + sc + ' ' + (home ? 'vs ' : 'en ') + esc(opp) + '</li>';
+  });
+}
+
+function matchPage(it, ctxIn) {
+  const { M, slugs, head } = ctxIn;
+  const { e, lg, f, url } = it, pk = f.pick, res = it.res;
+  const when = limaWhen(e.ko), day = limaYMD(e.ko);
+  const parts = f.labels.map((l, i) => l + ' ' + pct(f.p[i])).join(', ');
+  let body = '<p class="muted"><a href="../../ligas/">Ligas</a> › <a href="../../ligas/' + slugs[lg.id] + '/">' + esc(lg.name) + '</a></p>\n';
+  body += '<h1>' + esc(e.h) + ' vs ' + esc(e.a) + ': pronóstico, probabilidades y cuota justa</h1>\n';
+  body += '<p class="muted">' + esc(lg.name) + ' · ' + esc(when) + ' (hora de Lima) · actualizado ' + esc((M.generated || '').slice(0, 10)) + '</p>\n';
+  body += '<p>Para el partido <b>' + esc(e.h) + ' – ' + esc(e.a) + '</b> de ' + esc(lg.name) + ', el modelo de Aurum Predictor estima: ' + esc(parts) + '. ' +
+    'El resultado más probable es <b>' + esc(pk.label) + '</b> (' + pct(pk.p) + '), con una cuota justa de <b>' + odd(pk.fairOdds) + '</b>: una casa tendría que pagar más que eso para que valga la pena. ' +
+    (pk.conf === 'baja' ? 'Es un partido parejo y el pronóstico es poco fiable. ' : pk.conf === 'alta' ? 'Es un favorito claro, pero un favorito claro también falla: ' + pct(1 - pk.p) + ' de las veces el resultado es otro. ' : '') +
+    'No es una apuesta segura ni una recomendación.</p>\n';
+  body += '<h2>Probabilidades y cuota justa</h2>\n<div class="table-wrap"><table class="tbl"><thead><tr><th>Resultado</th><th class="r">Probabilidad</th><th class="r">Cuota justa</th></tr></thead><tbody>' +
+    f.labels.map((l, i) => '<tr><td>' + (i === pk.i ? '<b>' + esc(l) + '</b>' : esc(l)) + '</td><td class="r">' + pct(f.p[i]) + '</td><td class="r">' + odd(1 / f.p[i]) + '</td></tr>').join('') + '</tbody></table></div>\n';
+  body += '<p class="hint">Cuota justa = 1 ÷ probabilidad. ' + (f.info && f.info.reliable === false ? 'Hay pocos datos de alguno de los equipos: tómalo con cautela. ' : '') + (f.info && f.info.cross ? 'Los equipos vienen de ligas distintas: la fiabilidad es limitada. ' : '') + 'En el comparador completo puedes añadir la cuota de tu casa para ver si paga más que la justa.</p>\n';
+  body += '<p><a href="../../" style="text-decoration:underline">Abrir el comparador completo →</a></p>\n';
+  const fh = lastGames(res, e.h, 5), fa = lastGames(res, e.a, 5);
+  if (fh.length || fa.length) body += '<h2>Forma reciente</h2>\n<div class="pgrid2"><div><h3>' + esc(e.h) + '</h3><ul>' + fh.join('') + '</ul></div><div><h3>' + esc(e.a) + '</h3><ul>' + fa.join('') + '</ul></div></div>\n<p class="hint">G = ganó, E = empató, P = perdió.</p>\n';
+  const h2h = res.filter((r) => (r.h === e.h && r.a === e.a) || (r.h === e.a && r.a === e.h)).slice(-5).reverse();
+  if (h2h.length) body += '<h2>Enfrentamientos previos</h2>\n<ul>' + h2h.map((r) => '<li>' + esc(r.d) + ' · ' + esc(resultText(r)) + '</li>').join('') + '</ul>\n';
+  const bt = ctxIn.BTM[lg.id];
+  if (bt && bt.n >= 30) body += '<h2>Fiabilidad del modelo en esta liga</h2>\n<p>En una prueba histórica sin mirar el futuro, el modelo acertó el resultado más probable en el <b>' + pct(bt.acc) + '</b> de ' + bt.n + ' partidos de ' + esc(lg.name) + '. Acertar más que el azar no basta para ganar dinero: las casas ya descuentan esa información en sus cuotas.</p>\n';
+  const ld = { '@context': 'https://schema.org', '@type': 'SportsEvent', name: e.h + ' vs ' + e.a, startDate: e.ko, sport: lg.sportName || lg.sport, url: SITE + '/partidos/' + url + '/',
+    homeTeam: { '@type': 'SportsTeam', name: e.h }, awayTeam: { '@type': 'SportsTeam', name: e.a }, superEvent: { '@type': 'SportsEvent', name: lg.name } };
+  const desc = (pk.label + ' (' + pct(pk.p) + '), cuota justa ' + odd(pk.fairOdds) + '. Probabilidades, forma reciente y enfrentamientos previos de ' + e.h + ' vs ' + e.a + ' · ' + lg.name + '.').slice(0, 158);
+  return shell({ title: e.h + ' vs ' + e.a + ': pronóstico y cuota justa | Aurum Predictor', desc, canonical: SITE + '/partidos/' + url + '/', depth: 2, ...head, extraLd: ld,
+    crumbs: [['Inicio', SITE + '/'], ['Ligas', SITE + '/ligas/'], [lg.name, SITE + '/ligas/' + slugs[lg.id] + '/'], [e.h + ' vs ' + e.a, SITE + '/partidos/' + url + '/']], body });
+}
+
+function dayPage(kind, ymd, items, ctxIn) {
+  const { M, head, slugs } = ctxIn;
+  const hoy = kind === 'hoy', label = hoy ? 'hoy' : 'mañana';
+  const dir = hoy ? 'pronosticos-hoy' : 'pronosticos-manana';
+  const list = items.filter((it) => limaYMD(it.e.ko) === ymd).sort((a, b) => Date.parse(a.e.ko) - Date.parse(b.e.ko));
+  let body = '<h1>Pronósticos deportivos de ' + label + ': ' + esc(limaLong(ymd)) + '</h1>\n<p class="muted">Hora de Lima · actualizado ' + esc((M.generated || '').slice(0, 10)) + ' · se recalcula cada 8 horas.</p>\n';
+  body += '<p>Probabilidad de cada resultado y cuota justa para los partidos de ' + label + ' en las ligas que cubre Aurum Predictor. Son estimaciones de un modelo estadístico, no apuestas seguras: un 70 % de probabilidad significa que 3 de cada 10 veces el resultado es otro.</p>\n';
+  if (!list.length) body += '<p class="muted">No hay partidos con pronóstico para ' + label + ' en las ligas cubiertas. Mira <a href="../ligas/" style="text-decoration:underline">las ligas</a> o <a href="../pronosticos-' + (hoy ? 'manana' : 'hoy') + '/" style="text-decoration:underline">los pronósticos de ' + (hoy ? 'mañana' : 'hoy') + '</a>.</p>\n';
+  const byLg = new Map();
+  for (const it of list.slice(0, 250)) { if (!byLg.has(it.lg.id)) byLg.set(it.lg.id, []); byLg.get(it.lg.id).push(it); }
+  for (const [id, arr] of byLg) {
+    const lg = arr[0].lg;
+    body += '<h2><a href="../ligas/' + slugs[id] + '/" style="text-decoration:underline">' + esc(lg.name) + '</a></h2>\n<div class="table-wrap"><table class="tbl"><thead><tr><th>Partido</th><th>Hora</th><th>Pronóstico</th><th class="r">Prob.</th><th class="r">Cuota justa</th></tr></thead><tbody>' +
+      arr.map((it) => '<tr><td><a href="../partidos/' + it.url + '/" style="text-decoration:underline">' + esc(it.e.h + ' – ' + it.e.a) + '</a></td><td style="white-space:nowrap">' + esc(new Date(it.e.ko).toLocaleTimeString('es-PE', { timeZone: 'America/Lima', hour: '2-digit', minute: '2-digit', hour12: false })) + '</td><td><b>' + esc(it.f.pick.label) + '</b></td><td class="r">' + pct(it.f.pick.p) + '</td><td class="r">' + odd(it.f.pick.fairOdds) + '</td></tr>').join('') + '</tbody></table></div>\n';
+  }
+  body += '<p><a href="../" style="text-decoration:underline">Abrir el comparador completo →</a></p>\n';
+  return shell({ title: 'Pronósticos deportivos de ' + label + ' (' + limaLong(ymd) + ') | Aurum Predictor', desc: ('Pronósticos de ' + label + ': probabilidad y cuota justa de cada partido, Liga 1 de Perú y las principales ligas del mundo. ' + list.length + ' partidos.').slice(0, 158),
+    canonical: SITE + '/' + dir + '/', depth: 1, ...head, crumbs: [['Inicio', SITE + '/'], ['Pronósticos de ' + label, SITE + '/' + dir + '/']], body });
 }
 
 function indexPage(groups, slugs, head, M) {
@@ -171,13 +236,36 @@ function build(dist) {
   const slugs = leagueSlugs(leagues);
   leagues.forEach((l) => (l._next = nextBy[l.id] || 0));
 
-  const outDir = path.join(dist, 'ligas');
-  fs.rmSync(outDir, { recursive: true, force: true });
-  const ctxIn = { M, X, sctx, BTM, slugs, head };
+  const outDir = path.join(dist, 'ligas'), mDir = path.join(dist, 'partidos');
+  for (const d of [outDir, mDir, path.join(dist, 'pronosticos-hoy'), path.join(dist, 'pronosticos-manana')]) fs.rmSync(d, { recursive: true, force: true });
+  const lgOk = new Set(leagues.map((l) => l.id)), lgById = {}; leagues.forEach((l) => (lgById[l.id] = l));
+  const fcMap = {}, matchUrl = {}, items = [], usedUrl = new Set();
+  const resBy = {}; M.results.forEach((r) => { if (lgOk.has(r.lg)) (resBy[r.lg] = resBy[r.lg] || []).push(r); });
+  Object.values(resBy).forEach((a) => a.sort((x, y) => (x.d < y.d ? -1 : x.d > y.d ? 1 : 0)));
+  M.events.filter((e) => lgOk.has(e.lg) && e.status === 'pre' && Date.parse(e.ko) > now).sort((a, b) => Date.parse(a.ko) - Date.parse(b.ko)).forEach((e) => {
+    const f = X.forecast(sctx, e, { wModel: 0, temp: BTM._temp });
+    if (!f) return;
+    fcMap[e.id] = f;
+    let u = slugs[e.lg] + '-' + slugify(e.h) + '-vs-' + slugify(e.a) + '-' + limaYMD(e.ko);
+    if (usedUrl.has(u)) u += '-' + slugify(e.id);
+    usedUrl.add(u); matchUrl[e.id] = u;
+    items.push({ e, lg: lgById[e.lg], f, url: u, res: resBy[e.lg] || [] });
+  });
+  const ctxIn = { M, X, sctx, BTM, slugs, head, fcMap, matchUrl };
   for (const l of leagues) {
     const dir = path.join(outDir, slugs[l.id]);
     fs.mkdirSync(dir, { recursive: true });
     fs.writeFileSync(path.join(dir, 'index.html'), leaguePage(l, ctxIn));
+  }
+  for (const it of items) {
+    const dir = path.join(mDir, it.url);
+    fs.mkdirSync(dir, { recursive: true });
+    fs.writeFileSync(path.join(dir, 'index.html'), matchPage(it, ctxIn));
+  }
+  const today = limaYMD(new Date().toISOString()), tomorrow = limaYMD(new Date(now + 864e5).toISOString());
+  for (const [kind, ymd, dir] of [['hoy', today, 'pronosticos-hoy'], ['manana', tomorrow, 'pronosticos-manana']]) {
+    fs.mkdirSync(path.join(dist, dir), { recursive: true });
+    fs.writeFileSync(path.join(dist, dir, 'index.html'), dayPage(kind, ymd, items, ctxIn));
   }
   const groups = [];
   const sports = Array.from(new Set(leagues.map((l) => l.sport))).sort((a, b) => (SPORT_ORDER.indexOf(a) + 1 || 99) - (SPORT_ORDER.indexOf(b) + 1 || 99) || a.localeCompare(b));
@@ -185,11 +273,11 @@ function build(dist) {
   fs.writeFileSync(path.join(outDir, 'index.html'), indexPage(groups, slugs, head, M));
 
   const day = asOf;
-  const urls = [SITE + '/', SITE + '/ligas/', SITE + '/privacidad.html'].concat(leagues.map((l) => SITE + '/ligas/' + slugs[l.id] + '/'));
+  const urls = [SITE + '/', SITE + '/pronosticos-hoy/', SITE + '/pronosticos-manana/', SITE + '/ligas/', SITE + '/privacidad.html'].concat(leagues.map((l) => SITE + '/ligas/' + slugs[l.id] + '/'), items.map((it) => SITE + '/partidos/' + it.url + '/'));
   fs.writeFileSync(path.join(dist, 'sitemap.xml'), '<?xml version="1.0" encoding="UTF-8"?>\n<urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">\n' +
     urls.map((u) => '  <url><loc>' + esc(u) + '</loc><lastmod>' + day + '</lastmod></url>').join('\n') + '\n</urlset>\n');
   fs.writeFileSync(path.join(dist, 'robots.txt'), 'User-agent: *\nAllow: /\n\nSitemap: ' + SITE + '/sitemap.xml\n');
-  return { pages: leagues.length, urls: urls.length };
+  return { pages: leagues.length, matches: items.length, urls: urls.length };
 }
 
 module.exports = { build, esc, slugify, leagueSlugs, form, unpackMulti };
@@ -197,5 +285,5 @@ module.exports = { build, esc, slugify, leagueSlugs, form, unpackMulti };
 if (require.main === module) {
   const i = process.argv.indexOf('--dist');
   const r = build(i > 0 ? process.argv[i + 1] : path.join(__dirname, '..', 'dist'));
-  console.log('SEO listo: ' + r.pages + ' páginas de liga, sitemap con ' + r.urls + ' direcciones, robots.txt con el sitemap.');
+  console.log('SEO listo: ' + r.pages + ' páginas de liga, ' + r.matches + ' de partido, hoy y mañana; sitemap con ' + r.urls + ' direcciones, robots.txt con el sitemap.');
 }
