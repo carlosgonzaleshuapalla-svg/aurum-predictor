@@ -38,6 +38,9 @@ function limaWhen(iso) {
   return new Date(iso).toLocaleString('es-PE', { timeZone: 'America/Lima', weekday: 'short', day: '2-digit', month: 'short', hour: '2-digit', minute: '2-digit', hour12: false });
 }
 
+const CREST_RE = /^[a-z0-9_-]{2,30}(\/[a-z0-9_-]{1,30}){0,2}\/[A-Za-z0-9_-]{1,40}\.png$/;
+const crest = (p) => (p && CREST_RE.test(p) ? '<img class="crest" src="https://a.espncdn.com/combiner/i?img=/i/teamlogos/' + esc(p) + '&amp;w=48&amp;h=48" alt="" width="22" height="22" loading="lazy" referrerpolicy="no-referrer"> ' : '');
+const teamsHtml = (e, sep) => crest(e.hl) + esc(e.h) + sep + crest(e.al) + esc(e.a);
 const limaYMD = (iso) => new Date(iso).toLocaleDateString('en-CA', { timeZone: 'America/Lima' });
 const limaLong = (ymd) => new Date(ymd + 'T12:00:00Z').toLocaleDateString('es-PE', { timeZone: 'UTC', weekday: 'long', day: 'numeric', month: 'long', year: 'numeric' });
 
@@ -115,7 +118,7 @@ function leaguePage(lg, ctxIn) {
   const rows = [];
   for (const e of evs.slice(0, 20)) {
     const f = ctxIn.fcMap[e.id], url = ctxIn.matchUrl[e.id];
-    const name = url ? '<a href="../../partidos/' + url + '/" style="text-decoration:underline">' + esc(e.h + ' – ' + e.a) + '</a>' : esc(e.h + ' – ' + e.a);
+    const name = url ? '<a href="../../partidos/' + url + '/" style="text-decoration:underline">' + teamsHtml(e, ' – ') + '</a>' : teamsHtml(e, ' – ');
     if (!f) { rows.push('<tr><td>' + name + '</td><td>' + esc(limaWhen(e.ko)) + '</td><td colspan="3" class="muted">Sin pronóstico: datos insuficientes</td></tr>'); continue; }
     const pk = f.pick;
     rows.push('<tr><td>' + name + '</td><td style="white-space:nowrap">' + esc(limaWhen(e.ko)) + '</td><td><b>' + esc(pk.label) + '</b><br><small class="muted">' + esc(CONF[pk.conf] || '') + '</small></td><td class="r">' + pct(pk.p) + '</td><td class="r">' + odd(pk.fairOdds) + '</td></tr>');
@@ -157,7 +160,7 @@ function matchPage(it, ctxIn) {
   const when = limaWhen(e.ko), day = limaYMD(e.ko);
   const parts = f.labels.map((l, i) => l + ' ' + pct(f.p[i])).join(', ');
   let body = '<p class="muted"><a href="../../ligas/">Ligas</a> › <a href="../../ligas/' + slugs[lg.id] + '/">' + esc(lg.name) + '</a></p>\n';
-  body += '<h1>' + esc(e.h) + ' vs ' + esc(e.a) + ': pronóstico, probabilidades y cuota justa</h1>\n';
+  body += '<h1>' + teamsHtml(e, ' vs ') + ': pronóstico, probabilidades y cuota justa</h1>\n';
   body += '<p class="muted">' + esc(lg.name) + ' · ' + esc(when) + ' (hora de Lima) · actualizado ' + esc((M.generated || '').slice(0, 10)) + '</p>\n';
   body += '<p>Para el partido <b>' + esc(e.h) + ' – ' + esc(e.a) + '</b> de ' + esc(lg.name) + ', el modelo de Aurum Predictor estima: ' + esc(parts) + '. ' +
     'El resultado más probable es <b>' + esc(pk.label) + '</b> (' + pct(pk.p) + '), con una cuota justa de <b>' + odd(pk.fairOdds) + '</b>: una casa tendría que pagar más que eso para que valga la pena. ' +
@@ -193,7 +196,7 @@ function dayPage(kind, ymd, items, ctxIn) {
   for (const [id, arr] of byLg) {
     const lg = arr[0].lg;
     body += '<h2><a href="../ligas/' + slugs[id] + '/" style="text-decoration:underline">' + esc(lg.name) + '</a></h2>\n<div class="table-wrap"><table class="tbl"><thead><tr><th>Partido</th><th>Hora</th><th>Pronóstico</th><th class="r">Prob.</th><th class="r">Cuota justa</th></tr></thead><tbody>' +
-      arr.map((it) => '<tr><td><a href="../partidos/' + it.url + '/" style="text-decoration:underline">' + esc(it.e.h + ' – ' + it.e.a) + '</a></td><td style="white-space:nowrap">' + esc(new Date(it.e.ko).toLocaleTimeString('es-PE', { timeZone: 'America/Lima', hour: '2-digit', minute: '2-digit', hour12: false })) + '</td><td><b>' + esc(it.f.pick.label) + '</b></td><td class="r">' + pct(it.f.pick.p) + '</td><td class="r">' + odd(it.f.pick.fairOdds) + '</td></tr>').join('') + '</tbody></table></div>\n';
+      arr.map((it) => '<tr><td><a href="../partidos/' + it.url + '/" style="text-decoration:underline">' + teamsHtml(it.e, ' – ') + '</a></td><td style="white-space:nowrap">' + esc(new Date(it.e.ko).toLocaleTimeString('es-PE', { timeZone: 'America/Lima', hour: '2-digit', minute: '2-digit', hour12: false })) + '</td><td><b>' + esc(it.f.pick.label) + '</b></td><td class="r">' + pct(it.f.pick.p) + '</td><td class="r">' + odd(it.f.pick.fairOdds) + '</td></tr>').join('') + '</tbody></table></div>\n';
   }
   body += '<p><a href="../" style="text-decoration:underline">Abrir el comparador completo →</a></p>\n';
   return shell({ title: 'Pronósticos deportivos de ' + label + ' (' + limaLong(ymd) + ') | Aurum Predictor', desc: ('Pronósticos de ' + label + ': probabilidad y cuota justa de cada partido, Liga 1 de Perú y las principales ligas del mundo. ' + list.length + ' partidos.').slice(0, 158),

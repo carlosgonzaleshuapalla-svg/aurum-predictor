@@ -37,14 +37,18 @@ ADS_CLIENT_RE = re.compile(r"var CLIENT = '([^']*)';")
 ADS_VALID = re.compile(r"^ca-pub-\d{10,20}$")
 
 
-def csp(client=""):
+CREST_HOST = "https://a.espncdn.com"   # escudos de los equipos (ESPN); --sin-escudos los quita de los datos y de la política
+
+
+def csp(client="", crests=True):
     ads = " " + ADS_HOSTS if client else ""
+    img = "'self' data:" + (" https:" if client else (" " + CREST_HOST if crests else ""))
     return ("default-src 'self'; script-src 'self' 'unsafe-inline'%s; style-src 'self' 'unsafe-inline' https://fonts.googleapis.com; "
-            "font-src https://fonts.gstatic.com; img-src 'self' data:%s; connect-src 'self'%s%s"
-            % (ads, " https:" if client else "", ads, "; frame-src" + ads if client else ""))
+            "font-src https://fonts.gstatic.com; img-src %s; connect-src 'self'%s%s"
+            % (ads, img, ads, "; frame-src" + ads if client else ""))
 
 
-def headers(client=""):
+def headers(client="", crests=True):
     return """/*
   X-Content-Type-Options: nosniff
   Referrer-Policy: no-referrer
@@ -56,7 +60,7 @@ def headers(client=""):
   Cache-Control: public, max-age=3600
 /css/*
   Cache-Control: public, max-age=3600
-""" % csp(client)
+""" % csp(client, crests)
 
 
 def ads_client(root):
@@ -84,7 +88,7 @@ def stamp_now():
     return dt.datetime.now(dt.timezone.utc).strftime("%Y%m%d%H%M")
 
 
-def transform_index(html, stamp, with_odds_api=False, con_dk=False, client=""):
+def transform_index(html, stamp, with_odds_api=False, con_dk=False, client="", crests=True):
     """Adapta index.html para internet: sin enlace al casino, versión de caché fija (no Date.now()), CSP también en GitHub Pages
     (que ignora _headers) y sin pedir archivos que no se publican."""
     html = re.sub(r'\s*<a href="casino\.html"[^>]*>[^<]*</a>\.?', "", html)
@@ -97,7 +101,7 @@ def transform_index(html, stamp, with_odds_api=False, con_dk=False, client=""):
         html = html.replace("(calendarios, resultados y cuotas de referencia de DraftKings)", "(calendarios y resultados)")
     if "Content-Security-Policy" not in html:
         if "<head>" in html:
-            meta = '<meta http-equiv="Content-Security-Policy" content="%s">' % csp(client).replace('"', "&quot;")
+            meta = '<meta http-equiv="Content-Security-Policy" content="%s">' % csp(client, crests).replace('"', "&quot;")
             if client:   # verificación de AdSense: no carga nada, solo identifica el sitio
                 meta += '\n  <meta name="google-adsense-account" content="%s">' % client
             html = html.replace("<head>", "<head>\n  " + meta, 1)
@@ -106,8 +110,8 @@ def transform_index(html, stamp, with_odds_api=False, con_dk=False, client=""):
     return html
 
 
-def strip_draftkings(path):
-    """Quita las cuotas (odds) de los eventos en data/multi.js sin tocar el resto."""
+def strip_draftkings(path, drop_odds=True, drop_crests=False):
+    """Quita las cuotas (odds) y/o los escudos de los eventos en data/multi.js sin tocar el resto."""
     with open(path, encoding="utf-8") as f:
         t = f.read()
     m = re.match(r"^(window\.AURUM_MULTI_PACKED = )(.*);\s*$", t, re.S)
@@ -115,12 +119,16 @@ def strip_draftkings(path):
         raise SystemExit("Formato inesperado en data/multi.js: no se pueden quitar las cuotas de DraftKings")
     d = json.loads(m.group(2))
     for e in d.get("events", []):
-        e["odds"] = None
+        if drop_odds:
+            e["odds"] = None
+        if drop_crests:
+            e.pop("hl", None)
+            e.pop("al", None)
     with open(path, "w", encoding="utf-8") as f:
         f.write(m.group(1) + json.dumps(d, ensure_ascii=False, separators=(",", ":")) + ";\n")
 
 
-def build(root, out, with_odds_api=False, stamp=None, log=print, con_draftkings=False):
+def build(root, out, with_odds_api=False, stamp=None, log=print, con_draftkings=False, crests=True):
     stamp = stamp or stamp_now()
     root, out = os.path.abspath(root), os.path.abspath(out)
     if os.path.commonpath([root, out]) != root or out == root:
@@ -145,16 +153,16 @@ def build(root, out, with_odds_api=False, stamp=None, log=print, con_draftkings=
         os.makedirs(os.path.dirname(dst), exist_ok=True)
         if rel in ("index.html", "privacidad.html"):
             with open(src, encoding="utf-8") as f:
-                html = transform_index(f.read(), stamp, with_odds_api, con_draftkings, client)
+                html = transform_index(f.read(), stamp, with_odds_api, con_draftkings, client, crests)
             with open(dst, "w", encoding="utf-8") as f:
                 f.write(html)
         else:
             shutil.copyfile(src, dst)
-            if rel == "data/multi.js" and not con_draftkings:
-                strip_draftkings(dst)
+            if rel == "data/multi.js" and (not con_draftkings or not crests):
+                strip_draftkings(dst, drop_odds=not con_draftkings, drop_crests=not crests)
     if missing:
         raise SystemExit("Faltan datos para publicar: %s\nEjecuta primero: python3 tools/fetch_data.py && python3 tools/fetch_espn.py && node tools/backtest.js && node tools/backtest_multi.js" % ", ".join(missing))
-    extra = [("_headers", headers(client)), ("robots.txt", ROBOTS), (".nojekyll", "")]
+    extra = [("_headers", headers(client, crests)), ("robots.txt", ROBOTS), (".nojekyll", "")]
     if client:   # ads.txt: Google lo exige en la raíz del dominio para pagar los anuncios
         extra.append(("ads.txt", "google.com, %s, DIRECT, f08c47fec0942fa0\n" % client.replace("ca-", "", 1)))
     for name, text in extra:
@@ -211,8 +219,9 @@ def main(argv=None):
     ap.add_argument("--with-odds-api", action="store_true")
     ap.add_argument("--no-zip", action="store_true")
     ap.add_argument("--con-draftkings", action="store_true", help="incluye las cuotas de DraftKings (ESPN); por defecto NO")
+    ap.add_argument("--sin-escudos", action="store_true", help="no publica los escudos de los equipos (se cargan desde ESPN)")
     a = ap.parse_args(argv)
-    out = build(ROOT, os.path.join(ROOT, a.out), a.with_odds_api, con_draftkings=a.con_draftkings)
+    out = build(ROOT, os.path.join(ROOT, a.out), a.with_odds_api, con_draftkings=a.con_draftkings, crests=not a.sin_escudos)
     size = sum(os.path.getsize(os.path.join(dp, f)) for dp, _, fs in os.walk(out) for f in fs) / 1e6
     print("Listo: %s (%.1f MB sin comprimir; los hosts lo comprimen ~4×). Auditoría OK: sin casino, sin claves, sin herramientas, %s%s." % (os.path.relpath(out, ROOT), size, "con cuotas de DraftKings" if a.con_draftkings else "sin cuotas de DraftKings",
           ", anuncios AdSense ACTIVADOS (%s)" % ads_client(ROOT) if ads_client(ROOT) else ", sin anuncios"))

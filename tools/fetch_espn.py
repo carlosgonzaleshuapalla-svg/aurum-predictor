@@ -253,6 +253,20 @@ def comp_name(c):
     return n.strip()
 
 
+LOGO_PREFIX = "https://a.espncdn.com/i/teamlogos/"
+LOGO_PATH_RE = re.compile(r"^[a-z0-9_-]{2,30}(/[a-z0-9_-]{1,30}){0,2}/[A-Za-z0-9_-]{1,40}\.png$")
+
+
+def comp_logo(c):
+    """Ruta corta del escudo de ESPN (sin el prefijo), o None. Solo equipos: los deportes individuales no llevan escudo."""
+    u = (c.get("team") or {}).get("logo")
+    if isinstance(u, str) and u.startswith(LOGO_PREFIX):
+        path = u[len(LOGO_PREFIX):]
+        if LOGO_PATH_RE.match(path):
+            return path
+    return None
+
+
 def order_sides(comps):
     """-> (home, away) competidores. Por homeAway si existe; si no, por 'order'."""
     if len(comps) != 2:
@@ -328,6 +342,11 @@ def parse_event(ev, lg, sport, now, window_end):
                  "neutral": neutral, "odds": parse_odds(comp, state)}
             if preseason:
                 e["pre"] = True
+            hl, al = comp_logo(hc), comp_logo(ac)
+            if hl:
+                e["hl"] = hl
+            if al:
+                e["al"] = al
             out.append(("event", e))
     return out
 
@@ -435,6 +454,8 @@ def slim_competitor(c):
     t = c.get("team")
     if t:
         out["team"] = {"id": t.get("id"), "displayName": t.get("displayName") or t.get("name")}
+        if isinstance(t.get("logo"), str):
+            out["team"]["logo"] = t["logo"]
     a = c.get("athlete")
     if a:
         out["athlete"] = {"displayName": a.get("displayName"), "fullName": a.get("fullName")}

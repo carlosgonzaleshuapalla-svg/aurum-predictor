@@ -230,6 +230,37 @@ class StatusFilter(unittest.TestCase):
         self.assertEqual(parse(ev), [])
 
 
+class CrestTests(unittest.TestCase):
+    def ev(self, hlogo, alogo):
+        h, a = team("1", "Local", "home"), team("2", "Visita", "away")
+        if hlogo:
+            h["team"]["logo"] = hlogo
+        if alogo:
+            a["team"]["logo"] = alogo
+        return {"id": "7", "date": "2026-10-20T20:00Z", "competitions": [
+            {"id": "7", "date": "2026-10-20T20:00Z", "status": st("STATUS_SCHEDULED", "pre", False), "competitors": [h, a]}]}
+
+    def test_crest_path_kept_short(self):
+        out = parse(self.ev("https://a.espncdn.com/i/teamlogos/soccer/500/123.png", "https://a.espncdn.com/i/teamlogos/soccer/500/9.png"))
+        e = [r for k, r in out if k == "event"][0]
+        self.assertEqual((e["hl"], e["al"]), ("soccer/500/123.png", "soccer/500/9.png"))
+
+    def test_foreign_or_odd_logo_urls_are_dropped(self):
+        out = parse(self.ev("https://evil.example/x.png", 'https://a.espncdn.com/i/teamlogos/soccer/500/1.png" onerror="a.png'))
+        e = [r for k, r in out if k == "event"][0]
+        self.assertNotIn("hl", e)
+        self.assertNotIn("al", e)
+
+    def test_no_logo_no_keys(self):
+        e = [r for k, r in parse(self.ev(None, None)) if k == "event"][0]
+        self.assertNotIn("hl", e)
+
+    def test_cache_slimming_keeps_logo(self):
+        c = team("1", "Local", "home")
+        c["team"]["logo"] = "https://a.espncdn.com/i/teamlogos/soccer/500/123.png"
+        self.assertEqual(fe.slim_competitor(c)["team"]["logo"], "https://a.espncdn.com/i/teamlogos/soccer/500/123.png")
+
+
 class SchemaAndCache(unittest.TestCase):
     def test_slim_keeps_parseable_shape(self):
         for ev, sport in ((SOCCER_PRE, "soccer"), (UFC_EVENT, "mma"), (TENNIS_EVENT, "tennis")):

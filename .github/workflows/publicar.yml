@@ -67,10 +67,12 @@ jobs:
         env:
           PUB_ODDS: ${{ vars.PUBLICAR_ODDS_API }}
           PUB_CON_DK: ${{ vars.PUBLICAR_CON_DRAFTKINGS }}
+          PUB_SIN_ESCUDOS: ${{ vars.PUBLICAR_SIN_ESCUDOS }}   # 'true' = no mostrar escudos de equipos
         run: |
           ARGS="--no-zip"
           if [ "$PUB_ODDS" = "true" ]; then ARGS="$ARGS --with-odds-api"; fi
           if [ "$PUB_CON_DK" = "true" ]; then ARGS="$ARGS --con-draftkings"; fi
+          if [ "$PUB_SIN_ESCUDOS" = "true" ]; then ARGS="$ARGS --sin-escudos"; fi
           python tools/build_site.py $ARGS
       - name: Páginas por liga, sitemap y robots (para buscadores)
         continue-on-error: true   # si esto falla, la web principal se publica igual

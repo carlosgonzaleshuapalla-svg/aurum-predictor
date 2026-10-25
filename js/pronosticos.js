@@ -46,12 +46,23 @@
         fc = {}; evs.forEach((e) => { fc[e.id] = X.forecast(sctx, e, { wModel: S.wModel / 100, extraBooks: Object.assign({}, sameMarket(e, Object.assign({}, ctx.oapiBooks ? ctx.oapiBooks(e) || {} : {}, ctx.fdBooks(e) || {})), manualBooks(e) || {}), temp: BTM._temp }); });
       }
       const spOf = (e) => lgById[e.lg].sport;
+      // escudos: ESPN los sirve por ruta corta (e.hl / e.al); si no cargan o la ruta no es válida, se omiten sin romper nada
+      const CREST_RE = /^[a-z0-9_-]{2,30}(\/[a-z0-9_-]{1,30}){0,2}\/[A-Za-z0-9_-]{1,40}\.png$/;
+      const crest = (path) => {
+        if (!path || !CREST_RE.test(path)) return null;
+        const i = document.createElement('img');
+        i.className = 'crest'; i.alt = ''; i.width = 22; i.height = 22; i.loading = 'lazy'; i.referrerPolicy = 'no-referrer';
+        i.onerror = () => i.remove();
+        i.src = 'https://a.espncdn.com/combiner/i?img=/i/teamlogos/' + path + '&w=48&h=48';
+        return i;
+      };
+      const teamsLine = (e) => [crest(e.hl), e.h, ' – ', crest(e.al), e.a];
       const startsIn = (e) => (e.t - Date.now()) / 3600e3;
 
       /* ---------- tarjeta ---------- */
       function card(e) {
         const f = fc[e.id], lg = lgById[e.lg], live = e.status === 'in' || e.t < Date.now();
-        const head = h('div', {}, h('div', { class: 'teams' }, e.h + ' – ' + e.a), h('div', { class: 'meta' }, (isPeru(e.lg) ? '🇵🇪 ' : '') + lg.name + ' · ' + (live ? 'EN JUEGO / empezado' : limaStr(e) + ' (Lima)')));
+        const head = h('div', {}, h('div', { class: 'teams' }, ...teamsLine(e)), h('div', { class: 'meta' }, (isPeru(e.lg) ? '🇵🇪 ' : '') + lg.name + ' · ' + (live ? 'EN JUEGO / empezado' : limaStr(e) + ' (Lima)')));
         const openKey = (ev) => { if (ev.key === 'Enter' || ev.key === ' ') { ev.preventDefault(); detail(e); } };
         if (!f) return h('div', { class: 'evcard', role: 'button', tabindex: '0', onkeydown: openKey, onclick: () => detail(e) }, head, h('div', { class: 'muted', style: 'font-size:13px' }, 'Sin pronóstico: no hay cuotas ni histórico suficiente'));
         const pk = f.pick, bt = BTM[e.lg], cls = pk.conf === 'alta' ? 'val' : pk.conf === 'baja' ? 'warn' : '';
@@ -189,7 +200,7 @@
           list.replaceChildren();
           const best = withF.filter((e) => fc[e.id].pick.conf === 'alta' && fc[e.id].pick.fairOdds >= 1.2).sort((a, b) => fc[b.id].pick.p - fc[a.id].pick.p).slice(0, 5);
           if (best.length) list.append(h('div', { class: 'panel', style: 'margin:20px 0' }, h('div', { class: 'eyebrow' }, 'Favoritos más probables de esta selección (suelen pagar poco; cuota justa ≥ 1.20)'),
-            h('div', { class: 'table-wrap' }, h('table', { class: 'tbl' }, h('tbody', {}, best.map((e) => h('tr', { class: 'rowlink', tabindex: '0', onkeydown: (ev) => { if (ev.key === 'Enter') detail(e); }, onclick: () => detail(e) }, h('td', {}, e.h + ' – ' + e.a, h('small', {}, (isPeru(e.lg) ? '🇵🇪 ' : '') + lgById[e.lg].name + ' · ' + limaStr(e))), h('td', {}, h('b', {}, fc[e.id].pick.label)), h('td', { class: 'r' }, pct(fc[e.id].pick.p, 0)), h('td', { class: 'r muted' }, 'justa ' + od(fc[e.id].pick.fairOdds))))))),
+            h('div', { class: 'table-wrap' }, h('table', { class: 'tbl' }, h('tbody', {}, best.map((e) => h('tr', { class: 'rowlink', tabindex: '0', onkeydown: (ev) => { if (ev.key === 'Enter') detail(e); }, onclick: () => detail(e) }, h('td', {}, ...teamsLine(e), h('small', {}, (isPeru(e.lg) ? '🇵🇪 ' : '') + lgById[e.lg].name + ' · ' + limaStr(e))), h('td', {}, h('b', {}, fc[e.id].pick.label)), h('td', { class: 'r' }, pct(fc[e.id].pick.p, 0)), h('td', { class: 'r muted' }, 'justa ' + od(fc[e.id].pick.fairOdds))))))),
             h('p', { class: 'hint' }, 'Un 80 % significa que unas 2 de cada 10 veces falla. Una “combinada” de varios pronósticos altos multiplica esos fallos: tres de 80 % aciertan juntos solo ~51 %.')));
           list.append(h('div', { class: 'sec-t' }, h('h2', {}, sorted.length + ' eventos'), h('span', { class: 'muted' }, 'Toca un evento para ver el detalle y añadir la cuota de tu casa')));
           if (!sorted.length) list.append(h('div', { class: 'note' }, 'No hay eventos con estos filtros. Prueba “Semana” o “Todos los deportes”. Los datos se actualizan al ejecutar tools/fetch_espn.py.'));

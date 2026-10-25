@@ -182,5 +182,19 @@ class BuildTests(unittest.TestCase):
             self.build(ads="pub-123")
 
 
+    def test_crests_csp_and_strip(self):
+        self.assertIn("img-src 'self' data: https://a.espncdn.com", bs.csp("", True))
+        self.assertNotIn("espncdn", bs.csp("", False))
+        d = tempfile.mkdtemp()
+        p = os.path.join(d, "multi.js")
+        with open(p, "w", encoding="utf-8") as f:
+            f.write('window.AURUM_MULTI_PACKED = {"events":[{"id":"1","odds":{"DK":1},"hl":"soccer/500/1.png","al":"soccer/500/2.png"}],"results":[]};\n')
+        bs.strip_draftkings(p, drop_odds=False, drop_crests=True)
+        with open(p, encoding="utf-8") as f:
+            t = f.read()
+        self.assertNotIn('"hl"', t)
+        self.assertIn('"DK"', t)
+
+
 if __name__ == "__main__":
     unittest.main(verbosity=1)

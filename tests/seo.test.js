@@ -23,7 +23,7 @@ for (let r = 0; r < 14; r++) for (let h = 0; h < 4; h++) for (let a = 0; a < 4; 
 const future = new Date(Date.now() + 2 * 864e5).toISOString();
 const packed = { generated: new Date().toISOString(), source: 'espn', teams, leagues: [{ id: 'soccer/per.1', sport: 'soccer', sportName: 'Fútbol', name: 'Liga 1 (Perú)', country: 'PE', draw: true }, { id: 'soccer/x.1', sport: 'soccer', sportName: 'Fútbol', name: 'Liga Chica', draw: true }],
   events: [{ id: '1', lg: 'soccer/per.1', ko: future, h: 'Alfa', a: '<b>Delta</b>', status: 'pre', neutral: false, odds: null },
-    { id: '2', lg: 'soccer/per.1', ko: new Date(Date.now() + 864e5).toISOString(), h: 'Beta', a: 'Gama', status: 'pre', neutral: false, odds: null }], results: res };
+    { id: '2', lg: 'soccer/per.1', ko: new Date(Date.now() + 864e5).toISOString(), h: 'Beta', a: 'Gama', status: 'pre', neutral: false, odds: null, hl: 'soccer/500/1.png', al: 'soccer/500/2.png" onerror="a.png' }], results: res };
 fs.writeFileSync(path.join(dist, 'data', 'multi.js'), 'window.AURUM_MULTI_PACKED = ' + JSON.stringify(packed) + ';');
 fs.writeFileSync(path.join(dist, 'data', 'backtest_multi.js'), 'window.AURUM_BT_MULTI = {"soccer/per.1":{"sport":"soccer","n":120,"acc":0.5,"baseAcc":0.45}};');
 const r = S.build(dist);
@@ -44,8 +44,9 @@ ok(fs.readFileSync(path.join(dist, 'robots.txt'), 'utf8').includes('Sitemap: htt
 const mdirs = fs.readdirSync(path.join(dist, 'partidos'));
 ok(mdirs.length === 2 && mdirs.every((d) => /^liga-1-peru-.*-vs-.*-\d{4}-\d{2}-\d{2}$/.test(d)), 'una página por partido próximo con slug estable (liga-equipos-fecha): ' + mdirs.join(', '));
 const mp = fs.readFileSync(path.join(dist, 'partidos', mdirs.find((d) => d.includes('beta-vs-gama')), 'index.html'), 'utf8');
-ok(/<h1>Beta vs Gama: pronóstico, probabilidades y cuota justa<\/h1>/.test(mp) && mp.includes('"@type":"SportsEvent"') && mp.includes('Forma reciente') && mp.includes('Fiabilidad del modelo'), 'página de partido: título, SportsEvent, forma y fiabilidad');
+ok(/<h1>\s*Beta vs\s+Gama: pronóstico, probabilidades y cuota justa<\/h1>/.test(mp.replace(/<img[^>]*>/g, '')) && mp.includes('"@type":"SportsEvent"') && mp.includes('Forma reciente') && mp.includes('Fiabilidad del modelo'), 'página de partido: título, SportsEvent, forma y fiabilidad');
 ok(/ludopat/.test(mp) && /No es una apuesta segura/.test(mp), 'partido: aviso de juego responsable');
+ok(mp.includes('combiner/i?img=/i/teamlogos/soccer/500/1.png&amp;w=48') && !mp.includes('onerror'), 'escudo válido sí; ruta con inyección descartada');
 const dp = fs.readdirSync(path.join(dist, 'partidos')).map((d) => fs.readFileSync(path.join(dist, 'partidos', d, 'index.html'), 'utf8')).join('');
 ok(!dp.includes('<b>Delta</b>') && dp.includes('&lt;b&gt;Delta&lt;/b&gt;'), 'partidos: equipos escapados');
 const mn = fs.readFileSync(path.join(dist, 'pronosticos-manana', 'index.html'), 'utf8'), hy = fs.readFileSync(path.join(dist, 'pronosticos-hoy', 'index.html'), 'utf8');

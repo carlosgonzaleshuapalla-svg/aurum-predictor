@@ -161,3 +161,4 @@ nav.main a { white-space: nowrap; padding: 7px 14px; }
 .top-actions { flex-shrink: 0; }
 .wrap.pg { padding-left: 24px; padding-right: 24px; }
 @media (max-width: 600px) { .wrap.pg { padding-left: 16px; padding-right: 16px; } }
+.crest { width: 22px; height: 22px; object-fit: contain; vertical-align: -5px; margin: 0 6px 0 0; border-radius: 3px; }
