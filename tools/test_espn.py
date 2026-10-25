@@ -261,6 +261,16 @@ class CrestTests(unittest.TestCase):
         self.assertEqual(fe.slim_competitor(c)["team"]["logo"], "https://a.espncdn.com/i/teamlogos/soccer/500/123.png")
 
 
+class CacheVersionTest(unittest.TestCase):
+    def test_old_unsettled_entry_is_refetched_once(self):
+        now = dt.datetime(2026, 10, 25, 18, 0, tzinfo=dt.timezone.utc)
+        t = (now - dt.timedelta(minutes=5)).timestamp()
+        self.assertFalse(fe.fresh({"t": t, "events": []}, "202610", now))               # sin versión: se vuelve a bajar
+        self.assertTrue(fe.fresh({"t": t, "v": fe.CACHE_V, "events": []}, "202610", now))
+        old = (now - dt.timedelta(days=90)).timestamp()
+        self.assertTrue(fe.fresh({"t": old, "events": []}, "202501", now))              # periodo cerrado: no se toca
+
+
 class SchemaAndCache(unittest.TestCase):
     def test_slim_keeps_parseable_shape(self):
         for ev, sport in ((SOCCER_PRE, "soccer"), (UFC_EVENT, "mma"), (TENNIS_EVENT, "tennis")):
@@ -283,7 +293,7 @@ class SchemaAndCache(unittest.TestCase):
         self.assertTrue(fe.fresh(old, "202601", NOW))            # mes cerrado y asentado
         cur = {"t": (NOW - dt.timedelta(hours=2)).timestamp()}
         self.assertFalse(fe.fresh(cur, "2026", NOW))             # periodo actual: caduca a 30 min
-        cur2 = {"t": (NOW - dt.timedelta(minutes=5)).timestamp()}
+        cur2 = {"t": (NOW - dt.timedelta(minutes=5)).timestamp(), "v": fe.CACHE_V}
         self.assertTrue(fe.fresh(cur2, "2026", NOW))
 
     def test_add_months_and_keys(self):

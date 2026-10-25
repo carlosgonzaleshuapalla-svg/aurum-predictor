@@ -39,6 +39,7 @@ PAUSE = 0.25
 TTL_LIVE = 30 * 60          # periodos que incluyen hoy / calendario
 SETTLE_DAYS = 3             # un periodo es "para siempre" si se bajo 3 d despues de acabar
 ERR_TTL = 24 * 3600
+CACHE_V = 2                 # 2 = guarda el escudo del equipo; los periodos aún no cerrados con v<2 se vuelven a bajar una vez
 
 SPORT_NAMES = {
     "soccer": "Fútbol", "basketball": "Baloncesto", "baseball": "Béisbol",
@@ -527,6 +528,8 @@ def fresh(entry, key, now):
     if err:  # un 4xx es definitivo (slug inexistente); un fallo transitorio (0/5xx) se reintenta pronto
         return age < (ERR_TTL if str(err).startswith("HTTP 4") else 300)
     settled = fetched.date() > end + dt.timedelta(days=SETTLE_DAYS)
+    if not settled and entry.get("v", 1) < CACHE_V:
+        return False
     return settled or age < TTL_LIVE
 
 
@@ -544,7 +547,7 @@ class LeagueFetcher:
         url = "%s/%s/scoreboard?dates=%s&limit=%d" % (BASE, lid, key, LIMIT)
         code, js = self.net.get(url)
         if code == 200 and isinstance(js, dict) and "events" in js:
-            ent = {"t": time.time(), "events": [slim_event(e) for e in js["events"]]}
+            ent = {"t": time.time(), "v": CACHE_V, "events": [slim_event(e) for e in js["events"]]}
         elif prev and not prev.get("err") and prev.get("events"):
             # fallo transitorio: NUNCA se pisa una caché buena con un error; se usa lo anterior y se cuenta el aviso
             self.net.stale_used = getattr(self.net, "stale_used", 0) + 1
