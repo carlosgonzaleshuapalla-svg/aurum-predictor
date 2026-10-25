@@ -38,9 +38,12 @@ function limaWhen(iso) {
   return new Date(iso).toLocaleString('es-PE', { timeZone: 'America/Lima', weekday: 'short', day: '2-digit', month: 'short', hour: '2-digit', minute: '2-digit', hour12: false });
 }
 
+const FLAGS = require('../js/flags.js');
+const fl = (lg, prefix) => FLAGS.flagHtml(lg, prefix, esc);
 const CREST_RE = /^[a-z0-9_-]{2,30}(\/[a-z0-9_-]{1,30}){0,2}\/[A-Za-z0-9_-]{1,40}\.png$/;
 const crest = (p) => (p && CREST_RE.test(p) ? '<img class="crest" src="https://a.espncdn.com/combiner/i?img=/i/teamlogos/' + esc(p) + '&amp;w=48&amp;h=48" alt="" width="22" height="22" loading="lazy" referrerpolicy="no-referrer"> ' : '');
-const teamsHtml = (e, sep) => crest(e.hl) + esc(e.h) + sep + crest(e.al) + esc(e.a);
+const side = (path, code, prefix) => crest(path) || FLAGS.athleteFlagHtml(code, prefix, esc);
+const teamsHtml = (e, sep, prefix) => side(e.hl, e.hf, prefix) + esc(e.h) + sep + side(e.al, e.af, prefix) + esc(e.a);
 const limaYMD = (iso) => new Date(iso).toLocaleDateString('en-CA', { timeZone: 'America/Lima' });
 const limaLong = (ymd) => new Date(ymd + 'T12:00:00Z').toLocaleDateString('es-PE', { timeZone: 'UTC', weekday: 'long', day: 'numeric', month: 'long', year: 'numeric' });
 
@@ -109,7 +112,7 @@ function leaguePage(lg, ctxIn) {
   const now = Date.now();
   const evs = M.events.filter((e) => e.lg === lg.id && e.status === 'pre' && Date.parse(e.ko) > now).sort((a, b) => Date.parse(a.ko) - Date.parse(b.ko));
   const bt = BTM[lg.id];
-  let body = '<p class="muted"><a href="../">Ligas</a> › ' + esc(sname) + '</p>\n<h1>Pronósticos ' + esc(lg.name) + ': probabilidades y cuota justa</h1>\n';
+  let body = '<p class="muted"><a href="../">Ligas</a> › ' + esc(sname) + '</p>\n<h1>' + fl(lg, '../../') + 'Pronósticos ' + esc(lg.name) + ': probabilidades y cuota justa</h1>\n';
   body += '<p class="muted">Actualizado: ' + esc((M.generated || '').slice(0, 10)) + ' · se recalcula cada 8 horas.</p>\n';
   const method = X.isGoals(sport) ? 'un modelo de goles (Poisson / Dixon-Coles) ajustado con los partidos recientes de la liga' : 'un sistema de ratings Elo con ventaja de local y pesos por margen, ajustado con los resultados de la liga';
   body += '<p>Estas son las probabilidades que estima Aurum Predictor para los próximos partidos de ' + esc(lg.name) + ' · ' + esc(sname.toLowerCase()) + ', calculadas con ' + method + '. ' +
@@ -118,7 +121,7 @@ function leaguePage(lg, ctxIn) {
   const rows = [];
   for (const e of evs.slice(0, 20)) {
     const f = ctxIn.fcMap[e.id], url = ctxIn.matchUrl[e.id];
-    const name = url ? '<a href="../../partidos/' + url + '/" style="text-decoration:underline">' + teamsHtml(e, ' – ') + '</a>' : teamsHtml(e, ' – ');
+    const name = url ? '<a href="../../partidos/' + url + '/" style="text-decoration:underline">' + teamsHtml(e, ' – ', '../../') + '</a>' : teamsHtml(e, ' – ', '../../');
     if (!f) { rows.push('<tr><td>' + name + '</td><td>' + esc(limaWhen(e.ko)) + '</td><td colspan="3" class="muted">Sin pronóstico: datos insuficientes</td></tr>'); continue; }
     const pk = f.pick;
     rows.push('<tr><td>' + name + '</td><td style="white-space:nowrap">' + esc(limaWhen(e.ko)) + '</td><td><b>' + esc(pk.label) + '</b><br><small class="muted">' + esc(CONF[pk.conf] || '') + '</small></td><td class="r">' + pct(pk.p) + '</td><td class="r">' + odd(pk.fairOdds) + '</td></tr>');
@@ -160,8 +163,8 @@ function matchPage(it, ctxIn) {
   const when = limaWhen(e.ko), day = limaYMD(e.ko);
   const parts = f.labels.map((l, i) => l + ' ' + pct(f.p[i])).join(', ');
   let body = '<p class="muted"><a href="../../ligas/">Ligas</a> › <a href="../../ligas/' + slugs[lg.id] + '/">' + esc(lg.name) + '</a></p>\n';
-  body += '<h1>' + teamsHtml(e, ' vs ') + ': pronóstico, probabilidades y cuota justa</h1>\n';
-  body += '<p class="muted">' + esc(lg.name) + ' · ' + esc(when) + ' (hora de Lima) · actualizado ' + esc((M.generated || '').slice(0, 10)) + '</p>\n';
+  body += '<h1>' + teamsHtml(e, ' vs ', '../../') + ': pronóstico, probabilidades y cuota justa</h1>\n';
+  body += '<p class="muted">' + fl(lg, '../../') + esc(lg.name) + ' · ' + esc(when) + ' (hora de Lima) · actualizado ' + esc((M.generated || '').slice(0, 10)) + '</p>\n';
   body += '<p>Para el partido <b>' + esc(e.h) + ' – ' + esc(e.a) + '</b> de ' + esc(lg.name) + ', el modelo de Aurum Predictor estima: ' + esc(parts) + '. ' +
     'El resultado más probable es <b>' + esc(pk.label) + '</b> (' + pct(pk.p) + '), con una cuota justa de <b>' + odd(pk.fairOdds) + '</b>: una casa tendría que pagar más que eso para que valga la pena. ' +
     (pk.conf === 'baja' ? 'Es un partido parejo y el pronóstico es poco fiable. ' : pk.conf === 'alta' ? 'Es un favorito claro, pero un favorito claro también falla: ' + pct(1 - pk.p) + ' de las veces el resultado es otro. ' : '') +
@@ -195,8 +198,8 @@ function dayPage(kind, ymd, items, ctxIn) {
   for (const it of list.slice(0, 250)) { if (!byLg.has(it.lg.id)) byLg.set(it.lg.id, []); byLg.get(it.lg.id).push(it); }
   for (const [id, arr] of byLg) {
     const lg = arr[0].lg;
-    body += '<h2><a href="../ligas/' + slugs[id] + '/" style="text-decoration:underline">' + esc(lg.name) + '</a></h2>\n<div class="table-wrap"><table class="tbl"><thead><tr><th>Partido</th><th>Hora</th><th>Pronóstico</th><th class="r">Prob.</th><th class="r">Cuota justa</th></tr></thead><tbody>' +
-      arr.map((it) => '<tr><td><a href="../partidos/' + it.url + '/" style="text-decoration:underline">' + teamsHtml(it.e, ' – ') + '</a></td><td style="white-space:nowrap">' + esc(new Date(it.e.ko).toLocaleTimeString('es-PE', { timeZone: 'America/Lima', hour: '2-digit', minute: '2-digit', hour12: false })) + '</td><td><b>' + esc(it.f.pick.label) + '</b></td><td class="r">' + pct(it.f.pick.p) + '</td><td class="r">' + odd(it.f.pick.fairOdds) + '</td></tr>').join('') + '</tbody></table></div>\n';
+    body += '<h2>' + fl(lg, '../') + '<a href="../ligas/' + slugs[id] + '/" style="text-decoration:underline">' + esc(lg.name) + '</a></h2>\n<div class="table-wrap"><table class="tbl"><thead><tr><th>Partido</th><th>Hora</th><th>Pronóstico</th><th class="r">Prob.</th><th class="r">Cuota justa</th></tr></thead><tbody>' +
+      arr.map((it) => '<tr><td><a href="../partidos/' + it.url + '/" style="text-decoration:underline">' + teamsHtml(it.e, ' – ', '../') + '</a></td><td style="white-space:nowrap">' + esc(new Date(it.e.ko).toLocaleTimeString('es-PE', { timeZone: 'America/Lima', hour: '2-digit', minute: '2-digit', hour12: false })) + '</td><td><b>' + esc(it.f.pick.label) + '</b></td><td class="r">' + pct(it.f.pick.p) + '</td><td class="r">' + odd(it.f.pick.fairOdds) + '</td></tr>').join('') + '</tbody></table></div>\n';
   }
   body += '<p><a href="../" style="text-decoration:underline">Abrir el comparador completo →</a></p>\n';
   return shell({ title: 'Pronósticos deportivos de ' + label + ' (' + limaLong(ymd) + ') | Aurum Predictor', desc: ('Pronósticos de ' + label + ': probabilidad y cuota justa de cada partido, Liga 1 de Perú y las principales ligas del mundo. ' + list.length + ' partidos.').slice(0, 158),
@@ -207,7 +210,7 @@ function indexPage(groups, slugs, head, M) {
   let body = '<h1>Ligas y deportes con pronósticos</h1>\n<p class="muted">Actualizado: ' + esc((M.generated || '').slice(0, 10)) + '</p>\n' +
     '<p>Elige una liga para ver la probabilidad de cada resultado, la cuota justa y la forma reciente. Todo son estimaciones de un modelo estadístico, no apuestas seguras.</p>\n';
   for (const [sp, list] of groups) {
-    body += '<h2>' + esc(SPORT_NAME[sp] || sp) + '</h2>\n<ul>' + list.map((l) => '<li><a href="' + slugs[l.id] + '/" style="text-decoration:underline">' + esc(l.name) + '</a>' + (l._next ? ' <span class="muted">· ' + l._next + ' partido(s) próximo(s)</span>' : '') + '</li>').join('') + '</ul>\n';
+    body += '<h2>' + esc(SPORT_NAME[sp] || sp) + '</h2>\n<ul>' + list.map((l) => '<li>' + fl(l, '../') + '<a href="' + slugs[l.id] + '/" style="text-decoration:underline">' + esc(l.name) + '</a>' + (l._next ? ' <span class="muted">· ' + l._next + ' partido(s) próximo(s)</span>' : '') + '</li>').join('') + '</ul>\n';
   }
   return shell({ title: 'Ligas y deportes con pronósticos | Aurum Predictor', desc: 'Pronósticos por liga y deporte: probabilidades, cuota justa y forma reciente. Liga 1 de Perú, ligas de fútbol, NBA, MLB, UFC y más.', canonical: SITE + '/ligas/', depth: 1, ...head,
     crumbs: [['Inicio', SITE + '/'], ['Ligas', SITE + '/ligas/']], body });

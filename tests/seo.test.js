@@ -10,6 +10,17 @@ ok(S.esc('<script>"a"&\'b\'') === '&lt;script&gt;&quot;a&quot;&amp;&#39;b&#39;',
 const sl = S.leagueSlugs([{ id: 'a/1', name: 'Premier League' }, { id: 'b/2', name: 'Premier League' }]);
 ok(sl['a/1'] !== sl['b/2'], 'nombres repetidos → slugs distintos');
 
+console.log('[S1b] Banderas');
+const FL = require('../js/flags.js'), fs2 = require('fs');
+ok(FL.flagFor({ id: 'soccer/per.1', country: 'PE' }).code === 'pe', 'Perú → pe');
+ok(FL.flagFor({ id: 'soccer/eng.2', country: 'GB' }).code === 'gb-eng' && FL.flagFor({ id: 'soccer/sco.1', country: 'GB' }).code === 'gb-sct', 'Reino Unido se separa en Inglaterra y Escocia');
+ok(FL.flagFor({ id: 'soccer/uefa.champions', country: 'EU' }).code === 'eu' && FL.flagFor({ id: 'soccer/conmebol.libertadores', country: 'SA' }).emoji, 'UEFA → UE; Conmebol → globo (no confundir SA con Arabia Saudita)');
+ok(FL.flagFor({ id: 'x/y', country: 'ZZ' }) === null && FL.flagFor(null) === null, 'país desconocido → sin bandera');
+ok(Array.from(FL.HAVE).every((c) => fs2.existsSync(require('path').join(__dirname, '..', 'flags', c + '.svg'))), 'cada bandera declarada existe como archivo en flags/');
+ok(FL.athleteFlagHtml('GER', '../../', S.esc).includes('src="../../flags/de.svg"') && FL.athleteFlagHtml('blank', '', S.esc) === '' && FL.athleteFlagHtml('"><script>', '', S.esc) === '', 'deportistas: código ESPN → archivo de bandera; desconocidos o raros → nada');
+ok(Object.values(FL.IOC).every((f) => FL.HAVE.has(f)), 'todo código de ESPN apunta a una bandera que existe');
+ok(!FL.flagHtml({ id: 'a', country: 'PE' }, '../../', S.esc).includes('onerror'), 'HTML de bandera sin atributos de evento');
+
 console.log('[S2] Generación sobre un dist sintético');
 const dist = fs.mkdtempSync(path.join(os.tmpdir(), 'seo-'));
 fs.mkdirSync(path.join(dist, 'data'));
@@ -34,6 +45,7 @@ ok(page.includes('Content-Security-Policy') && page.includes('google-adsense-acc
 ok(page.includes('../../css/styles.css?v=9') && page.includes('../../js/ads.js?v=9'), 'rutas relativas con versión');
 ok(!page.includes('<b>Delta</b>') && page.includes('&lt;b&gt;Delta&lt;/b&gt;'), 'nombres de equipo escapados (sin inyección)');
 ok(/Gana Alfa|Gana &lt;b&gt;Delta|Empate/.test(page) && page.includes('Cuota justa'), 'pronóstico y cuota justa del próximo partido');
+ok(page.includes('src="../../flags/pe.svg"'), 'página de liga con la bandera del país (ruta relativa)');
 ok(/ludopat/.test(page) && /No acepta apuestas/.test(page), 'aviso de juego responsable y de que no acepta apuestas');
 ok(!/DraftKings/i.test(page), 'sin cuotas de DraftKings');
 const idx = fs.readFileSync(path.join(dist, 'ligas', 'index.html'), 'utf8');

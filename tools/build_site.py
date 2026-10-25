@@ -26,7 +26,7 @@ ROOT = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 
 PUBLIC_FILES = [
     "index.html", "privacidad.html", "css/styles.css", "css/predictor.css",
-    "js/model.js", "js/multimodel.js", "js/math.js", "js/core.js", "js/pronosticos.js", "js/predictor.js", "js/ads.js",
+    "js/model.js", "js/multimodel.js", "js/math.js", "js/core.js", "js/pronosticos.js", "js/predictor.js", "js/ads.js", "js/flags.js",
     "data/history.js", "data/fixtures.js", "data/backtest.js", "data/backtest_multi.js", "data/multi.js", "data/casas_peru.js",
 ]
 OPTIONAL = {"data/odds_api.js": "--with-odds-api"}
@@ -160,6 +160,12 @@ def build(root, out, with_odds_api=False, stamp=None, log=print, con_draftkings=
             shutil.copyfile(src, dst)
             if rel == "data/multi.js" and (not con_draftkings or not crests):
                 strip_draftkings(dst, drop_odds=not con_draftkings, drop_crests=not crests)
+    fdir = os.path.join(root, "flags")                    # banderas propias (circle-flags, MIT): solo .svg y su licencia
+    if os.path.isdir(fdir):
+        for fn in sorted(os.listdir(fdir)):
+            if fn.endswith(".svg") or fn == "LICENSE.txt":
+                os.makedirs(os.path.join(out, "flags"), exist_ok=True)
+                shutil.copyfile(os.path.join(fdir, fn), os.path.join(out, "flags", fn))
     if missing:
         raise SystemExit("Faltan datos para publicar: %s\nEjecuta primero: python3 tools/fetch_data.py && python3 tools/fetch_espn.py && node tools/backtest.js && node tools/backtest_multi.js" % ", ".join(missing))
     extra = [("_headers", headers(client, crests)), ("robots.txt", ROBOTS), (".nojekyll", "")]
@@ -191,7 +197,7 @@ def audit(root, out):
             if rel not in ("_headers", "robots.txt", ".nojekyll", "ads.txt") and FORBIDDEN_PATHS.search(rel):
                 problems.append("archivo no permitido: " + rel)
                 continue
-            if not rel.endswith((".html", ".js", ".css", ".txt", "_headers")):
+            if not rel.endswith((".html", ".js", ".css", ".txt", "_headers", ".svg")):
                 continue
             with open(full, encoding="utf-8", errors="replace") as f:
                 txt = f.read()

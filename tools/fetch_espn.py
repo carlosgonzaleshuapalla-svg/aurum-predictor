@@ -39,7 +39,7 @@ PAUSE = 0.25
 TTL_LIVE = 30 * 60          # periodos que incluyen hoy / calendario
 SETTLE_DAYS = 3             # un periodo es "para siempre" si se bajo 3 d despues de acabar
 ERR_TTL = 24 * 3600
-CACHE_V = 2                 # 2 = guarda el escudo del equipo; los periodos aún no cerrados con v<2 se vuelven a bajar una vez
+CACHE_V = 3                 # 2 = escudo del equipo, 3 = bandera del deportista; los periodos aún no cerrados con versión menor se vuelven a bajar una vez
 
 SPORT_NAMES = {
     "soccer": "Fútbol", "basketball": "Baloncesto", "baseball": "Béisbol",
@@ -268,6 +268,16 @@ def comp_logo(c):
     return None
 
 
+FLAG_RE = re.compile(r"^https://a\.espncdn\.com/i/teamlogos/countries/\d+/([a-z]{2,4})\.png$")
+
+
+def comp_flag(c):
+    """Código de país (3 letras, estilo COI) de un deportista de ESPN, o None. 'blank' es el comodín sin país."""
+    fl = (c.get("athlete") or {}).get("flag")
+    m = FLAG_RE.match(fl.get("href") or "") if isinstance(fl, dict) else None
+    return m.group(1) if m and m.group(1) != "blank" else None
+
+
 def order_sides(comps):
     """-> (home, away) competidores. Por homeAway si existe; si no, por 'order'."""
     if len(comps) != 2:
@@ -348,6 +358,11 @@ def parse_event(ev, lg, sport, now, window_end):
                 e["hl"] = hl
             if al:
                 e["al"] = al
+            hf, af = comp_flag(hc), comp_flag(ac)
+            if hf:
+                e["hf"] = hf
+            if af:
+                e["af"] = af
             out.append(("event", e))
     return out
 
@@ -460,6 +475,9 @@ def slim_competitor(c):
     a = c.get("athlete")
     if a:
         out["athlete"] = {"displayName": a.get("displayName"), "fullName": a.get("fullName")}
+        fl = a.get("flag")
+        if isinstance(fl, dict) and isinstance(fl.get("href"), str):
+            out["athlete"]["flag"] = {"href": fl["href"]}
     return out
 
 

@@ -56,13 +56,32 @@
         i.src = 'https://a.espncdn.com/combiner/i?img=/i/teamlogos/' + path + '&w=48&h=48';
         return i;
       };
-      const teamsLine = (e) => [crest(e.hl), e.h, ' – ', crest(e.al), e.a];
+      // tenis y MMA: bandera del país del deportista (flags/<iso>.svg) en lugar de escudo
+      const aflag = (code) => {
+        const f = root.AurumFlags && root.AurumFlags.athleteFlag(code);
+        if (!f) return null;
+        const i = document.createElement('img');
+        i.className = 'flag ath'; i.alt = ''; i.width = 20; i.height = 20; i.loading = 'lazy'; i.src = 'flags/' + f.code + '.svg';
+        i.onerror = () => i.remove();
+        return i;
+      };
+      const teamsLine = (e) => [crest(e.hl) || aflag(e.hf), e.h, ' – ', crest(e.al) || aflag(e.af), e.a];
+      // bandera del país de la liga (js/flags.js); regiones como un globo
+      const flag = (lgId) => {
+        const f = root.AurumFlags && root.AurumFlags.flagFor(lgById[lgId]);
+        if (!f) return null;
+        if (!f.code) return h('span', { class: 'flag-emoji', title: f.label }, f.emoji, ' ');
+        const i = document.createElement('img');
+        i.className = 'flag'; i.alt = ''; i.width = 16; i.height = 16; i.loading = 'lazy'; i.title = f.label; i.src = 'flags/' + f.code + '.svg';
+        i.onerror = () => i.remove();
+        return i;
+      };
       const startsIn = (e) => (e.t - Date.now()) / 3600e3;
 
       /* ---------- tarjeta ---------- */
       function card(e) {
         const f = fc[e.id], lg = lgById[e.lg], live = e.status === 'in' || e.t < Date.now();
-        const head = h('div', {}, h('div', { class: 'teams' }, ...teamsLine(e)), h('div', { class: 'meta' }, (isPeru(e.lg) ? '🇵🇪 ' : '') + lg.name + ' · ' + (live ? 'EN JUEGO / empezado' : limaStr(e) + ' (Lima)')));
+        const head = h('div', {}, h('div', { class: 'teams' }, ...teamsLine(e)), h('div', { class: 'meta' }, flag(e.lg), lg.name + ' · ' + (live ? 'EN JUEGO / empezado' : limaStr(e) + ' (Lima)')));
         const openKey = (ev) => { if (ev.key === 'Enter' || ev.key === ' ') { ev.preventDefault(); detail(e); } };
         if (!f) return h('div', { class: 'evcard', role: 'button', tabindex: '0', onkeydown: openKey, onclick: () => detail(e) }, head, h('div', { class: 'muted', style: 'font-size:13px' }, 'Sin pronóstico: no hay cuotas ni histórico suficiente'));
         const pk = f.pick, bt = BTM[e.lg], cls = pk.conf === 'alta' ? 'val' : pk.conf === 'baja' ? 'warn' : '';
@@ -179,7 +198,7 @@
           // listas desplegables en lugar de una fila de botones por cada opción
           const dd = (label, opts, cur, pick) => { const sel = h('select', { class: 'inp', 'aria-label': label, onchange: (ev) => pick(ev.target.value) }, opts.map(([v, t]) => h('option', { value: v }, t))); sel.value = cur; return SL.ui.field(label, sel); };
           const sportOpts = [['all', 'Todos los deportes · ' + cnt('all')]].concat(sports.map((s) => [s, spName(s) + ' · ' + cnt(s)]));
-          const lgOpts = [['all', 'Todas las ligas · ' + evs.filter(inSport).length]].concat(lgsOf.map((l) => [l, (isPeru(l) ? '🇵🇪 ' : '') + lgById[l].name + ' · ' + evs.filter((e) => e.lg === l).length]));
+          const lgOpts = [['all', 'Todas las ligas · ' + evs.filter(inSport).length]].concat(lgsOf.map((l) => [l, lgById[l].name + ' · ' + evs.filter((e) => e.lg === l).length]));
           const q = h('input', { class: 'search', type: 'search', placeholder: 'Buscar equipo o peleador', value: S.q || '', oninput: (ev) => { S.q = ev.target.value; list.replaceChildren(); fill(); } });
           top.append(h('div', { class: 'filters' },
             dd('Deporte', sportOpts, S.sport, (v) => { S.sport = v; S.mlg = 'all'; saveUI(); render(); }),
@@ -200,7 +219,7 @@
           list.replaceChildren();
           const best = withF.filter((e) => fc[e.id].pick.conf === 'alta' && fc[e.id].pick.fairOdds >= 1.2).sort((a, b) => fc[b.id].pick.p - fc[a.id].pick.p).slice(0, 5);
           if (best.length) list.append(h('div', { class: 'panel', style: 'margin:20px 0' }, h('div', { class: 'eyebrow' }, 'Favoritos más probables de esta selección (suelen pagar poco; cuota justa ≥ 1.20)'),
-            h('div', { class: 'table-wrap' }, h('table', { class: 'tbl' }, h('tbody', {}, best.map((e) => h('tr', { class: 'rowlink', tabindex: '0', onkeydown: (ev) => { if (ev.key === 'Enter') detail(e); }, onclick: () => detail(e) }, h('td', {}, ...teamsLine(e), h('small', {}, (isPeru(e.lg) ? '🇵🇪 ' : '') + lgById[e.lg].name + ' · ' + limaStr(e))), h('td', {}, h('b', {}, fc[e.id].pick.label)), h('td', { class: 'r' }, pct(fc[e.id].pick.p, 0)), h('td', { class: 'r muted' }, 'justa ' + od(fc[e.id].pick.fairOdds))))))),
+            h('div', { class: 'table-wrap' }, h('table', { class: 'tbl' }, h('tbody', {}, best.map((e) => h('tr', { class: 'rowlink', tabindex: '0', onkeydown: (ev) => { if (ev.key === 'Enter') detail(e); }, onclick: () => detail(e) }, h('td', {}, ...teamsLine(e), h('small', {}, flag(e.lg), lgById[e.lg].name + ' · ' + limaStr(e))), h('td', {}, h('b', {}, fc[e.id].pick.label)), h('td', { class: 'r' }, pct(fc[e.id].pick.p, 0)), h('td', { class: 'r muted' }, 'justa ' + od(fc[e.id].pick.fairOdds))))))),
             h('p', { class: 'hint' }, 'Un 80 % significa que unas 2 de cada 10 veces falla. Una “combinada” de varios pronósticos altos multiplica esos fallos: tres de 80 % aciertan juntos solo ~51 %.')));
           list.append(h('div', { class: 'sec-t' }, h('h2', {}, sorted.length + ' eventos'), h('span', { class: 'muted' }, 'Toca un evento para ver el detalle y añadir la cuota de tu casa')));
           if (!sorted.length) list.append(h('div', { class: 'note' }, 'No hay eventos con estos filtros. Prueba “Semana” o “Todos los deportes”. Los datos se actualizan al ejecutar tools/fetch_espn.py.'));
@@ -219,7 +238,7 @@
         const rows = Object.keys(BTM).filter((k) => k !== '_temp' && k !== '_oos' && BTM[k].n >= 20).sort((a, b) => (isPeru(b) - isPeru(a)) || BTM[b].n - BTM[a].n);
         if (!rows.length) return h('p', { class: 'muted' }, 'Ejecuta node tools/backtest_multi.js para calcular los aciertos por liga.');
         return h('div', { class: 'table-wrap' }, h('table', { class: 'tbl' }, h('thead', {}, h('tr', {}, ['Liga', 'Partidos', 'Acierta el pick', 'Referencia', 'Log-loss'].map((c, i) => h('th', { class: i ? 'r' : '' }, c)))),
-          h('tbody', {}, rows.map((k) => { const b = BTM[k], l = lgById[k]; return h('tr', {}, h('td', {}, (isPeru(k) ? '🇵🇪 ' : '') + (l ? l.name : k), h('small', {}, spName(l ? l.sport : '')), ), h('td', { class: 'r' }, String(b.n)), h('td', { class: 'r' }, h('b', {}, pct(b.acc, 1))), h('td', { class: 'r muted' }, pct(b.baseAcc, 1)), h('td', { class: 'r muted' }, b.logloss.toFixed(3))); }))));
+          h('tbody', {}, rows.map((k) => { const b = BTM[k], l = lgById[k]; return h('tr', {}, h('td', {}, flag(k), (l ? l.name : k), h('small', {}, spName(l ? l.sport : '')), ), h('td', { class: 'r' }, String(b.n)), h('td', { class: 'r' }, h('b', {}, pct(b.acc, 1))), h('td', { class: 'r muted' }, pct(b.baseAcc, 1)), h('td', { class: 'r muted' }, b.logloss.toFixed(3))); }))));
       }
       return { page, accuracyTable, hasData: () => true };
     },

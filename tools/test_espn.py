@@ -261,6 +261,33 @@ class CrestTests(unittest.TestCase):
         self.assertEqual(fe.slim_competitor(c)["team"]["logo"], "https://a.espncdn.com/i/teamlogos/soccer/500/123.png")
 
 
+class AthleteFlagTests(unittest.TestCase):
+    def fighter_ev(self, h_href, a_href):
+        def ath(i, name, href):
+            a = {"id": i, "type": "athlete", "athlete": {"displayName": name, "fullName": name}}
+            if href:
+                a["athlete"]["flag"] = {"href": href, "alt": "x"}
+            return a
+        return {"id": "8", "date": "2026-10-20T20:00Z", "competitions": [
+            {"id": "8", "date": "2026-10-20T20:00Z", "status": st("STATUS_SCHEDULED", "pre", False),
+             "competitors": [dict(ath("1", "A", h_href), order=1), dict(ath("2", "B", a_href), order=2)]}]}
+
+    def test_flag_code_extracted(self):
+        out = parse(self.fighter_ev("https://a.espncdn.com/i/teamlogos/countries/500/bra.png", "https://a.espncdn.com/i/teamlogos/countries/500/ger.png"), "mma/ufc", "mma")
+        e = [r for k, r in out if k == "event"][0]
+        self.assertEqual((e["hf"], e["af"]), ("bra", "ger"))
+
+    def test_blank_and_foreign_flags_dropped(self):
+        out = parse(self.fighter_ev("https://a.espncdn.com/i/teamlogos/countries/500/blank.png", 'https://evil.example/countries/500/usa.png'), "mma/ufc", "mma")
+        e = [r for k, r in out if k == "event"][0]
+        self.assertNotIn("hf", e)
+        self.assertNotIn("af", e)
+
+    def test_cache_keeps_flag(self):
+        c = {"id": "1", "type": "athlete", "athlete": {"displayName": "A", "fullName": "A", "flag": {"href": "https://a.espncdn.com/i/teamlogos/countries/500/bra.png", "alt": "Brazil"}}}
+        self.assertEqual(fe.slim_competitor(c)["athlete"]["flag"]["href"], "https://a.espncdn.com/i/teamlogos/countries/500/bra.png")
+
+
 class CacheVersionTest(unittest.TestCase):
     def test_old_unsettled_entry_is_refetched_once(self):
         now = dt.datetime(2026, 10, 25, 18, 0, tzinfo=dt.timezone.utc)
