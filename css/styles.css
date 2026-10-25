@@ -1,14 +1,17 @@
-/* Aurum · sistema "Midnight vault" (DESIGN-2). Serif ≥28px, Inter debajo; cobre solo en etiquetas; sin sombras. */
-@import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&family=Playfair+Display:wght@400;500&display=swap');
+/* Aurum · sistema "Swap" (DESIGN-3): lienzo menta, serif fina arriba (Cormorant Garamond ≥28px), Inter debajo, píldoras lima, tarjetas blancas de 24px con sombra suave.
+   Los nombres de variable vienen del tema oscuro anterior; ahora significan: obsidian = lienzo, onyx/carbon = superficies, graphite/slate = bordes, white = tinta fuerte. */
+@import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&family=Cormorant+Garamond:wght@300;400;500;600&display=swap');
 
 :root {
-  --obsidian: #08080a; --onyx: #040406; --carbon: #121317; --graphite: #1c1d22; --slate: #2e3038; --smoke: #464853;
-  --ash: #5e616e; --steel: #777a88; --fog: #9194a1; --mist: #acafb9; --silver: #c7c9d1; --bone: #e2e3e9; --white: #fff;
-  --copper: #cc9166; --sage: #8fb59a; --rose: #c9777f;
-  --gild: linear-gradient(103deg, rgb(174,147,87), rgb(255,240,204) 40%, rgb(174,147,87) 70%, rgba(189,157,79,0));
-  --serif: 'Ivy Presto', 'Playfair Display', 'Libre Caslon Display', Georgia, serif;
+  --obsidian: #f2ffe3; --onyx: #ffffff; --carbon: #ebf7da; --graphite: #d3dcc8; --slate: #b4bfa9; --smoke: #9cb0a8;
+  --ash: #6f7a6c; --steel: #838676; --fog: #4d5859; --mist: #3a4546; --silver: #2d3637; --bone: #000000; --white: #000000;
+  --copper: #0d5b3b; --amber: #8a4f12; --sage: #11704a; --rose: #b3343f;
+  --lime: #a3fda7; --lime-grad: linear-gradient(90deg, rgb(130,255,135), rgb(163,253,167) 50%, rgb(222,255,130));
+  --forest: #0d5b3b; --pine: #083a26; --shadow: 0 0 28px rgba(0,0,0,.09);
+  --gild: linear-gradient(90deg, rgb(130,255,135), rgb(222,255,130));
+  --serif: 'Cormorant Garamond', 'Playfair Display', 'Libre Caslon Display', Georgia, serif;
   --sans: 'Inter', ui-sans-serif, system-ui, -apple-system, 'Segoe UI', Roboto, sans-serif;
-  --max: 1216px; --r-card: 10px; --r-pill: 9999px;
+  --max: 1200px; --r-card: 24px; --r-pill: 9999px;
 }
 * { box-sizing: border-box; margin: 0; }
 html { scroll-behavior: smooth; }
@@ -43,7 +46,7 @@ button.pill:hover { border-color: var(--white); }
 .tag.ok { border-color: rgba(143,181,154,.5); color: var(--sage); }
 
 /* ---------- Cabecera ---------- */
-header.top { position: sticky; top: 0; z-index: 40; background: rgba(8,8,10,.86); backdrop-filter: blur(14px); border-bottom: 1px solid var(--graphite); }
+header.top { position: sticky; top: 0; z-index: 40; background: rgba(242,255,227,.88); backdrop-filter: blur(14px); border-bottom: 1px solid var(--graphite); }
 .top-in { max-width: var(--max); margin: 0 auto; padding: 0 24px; height: 64px; display: flex; align-items: center; gap: 28px; }
 .logo { font: 400 26px/1 var(--serif); letter-spacing: .02em; display: flex; align-items: center; gap: 8px; }
 .logo i { width: 9px; height: 9px; border-radius: 50%; background: var(--gild); display: inline-block; }
@@ -161,7 +164,7 @@ input[type=range]::-moz-range-thumb { width: 22px; height: 22px; border-radius: 
 .under-stage h3 { font: 500 16px var(--sans); margin-bottom: 8px; letter-spacing: -.02em; }
 
 /* ---------- Modales / toasts ---------- */
-.backdrop { position: fixed; inset: 0; background: rgba(0,0,0,.72); z-index: 100; display: grid; place-items: center; padding: 16px; overflow-y: auto; }
+.backdrop { position: fixed; inset: 0; background: rgba(8,30,18,.5); z-index: 100; display: grid; place-items: center; padding: 16px; overflow-y: auto; }
 .modal { width: 100%; max-width: 460px; background: var(--carbon); border: 1px solid var(--slate); border-radius: var(--r-card); }
 .modal.wide { max-width: 620px; }
 .modal-head { display: flex; justify-content: space-between; align-items: center; padding: 20px 24px 0; }
@@ -170,7 +173,7 @@ input[type=range]::-moz-range-thumb { width: 22px; height: 22px; border-radius: 
 .warn-box { padding: 12px 14px; border: 1px solid var(--slate); border-radius: 8px; font-size: 13px; color: var(--mist); background: var(--obsidian); }
 .warn-box b { color: var(--copper); font-weight: 600; }
 .check { display: flex; gap: 10px; align-items: flex-start; font-size: 13px; color: var(--mist); }
-.check input { margin-top: 3px; accent-color: #fff; }
+.check input { margin-top: 3px; accent-color: #0d5b3b; }
 .code { font: 12px/1.5 ui-monospace, SFMono-Regular, Menlo, monospace; word-break: break-all; padding: 10px 12px; background: var(--obsidian); border: 1px solid var(--graphite); border-radius: 8px; color: var(--silver); }
 #toasts { position: fixed; right: 16px; bottom: 16px; z-index: 200; display: flex; flex-direction: column; gap: 8px; align-items: flex-end; }
 .toast { background: var(--carbon); border: 1px solid var(--slate); border-radius: var(--r-pill); padding: 10px 18px; font-size: 14px; animation: in .25s ease-out; }

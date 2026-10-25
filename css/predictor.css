@@ -92,3 +92,72 @@
 .seo-page h3 { font: 500 16px/1.3 var(--sans); color: var(--white); margin: 6px 0; }
 .seo-page li { overflow-wrap: anywhere; }
 @media (max-width: 640px) { .pgrid2 { grid-template-columns: 1fr; } }
+
+/* ================= Tema Swap (DESIGN-3): ajustes sobre los componentes ================= */
+body { letter-spacing: -.01em; }
+.serif, .pg h1, .pg h2, .hero h1, .sec-head h2, .page h1, .legal-page h1, .stat b, .promo h3 { font-weight: 300; letter-spacing: -.017em; }
+.pg h1 { line-height: .98; }
+.pg h1 em { font-style: italic; background: linear-gradient(90deg, #0d5b3b, #1a9a5c 55%, #5aa832); -webkit-background-clip: text; background-clip: text; color: transparent; -webkit-text-fill-color: transparent; padding-right: .06em; }
+.logo { font-weight: 500; letter-spacing: -.01em; }
+.eyebrow { color: var(--forest); font-weight: 700; font-size: 12px; letter-spacing: .06em; }
+.eyebrow.dim { color: var(--fog); }
+header.top { border-bottom: 0; }
+nav.main a { color: var(--silver); border-radius: var(--r-pill); }
+nav.main a:hover { background: rgba(13,91,59,.08); color: var(--white); }
+nav.main a.on { background: var(--lime); color: #000; }
+nav.main a.on::after { display: none; }
+.btn-primary, .pill.on, .chipsel.on { background: var(--lime); color: #000; border: 1px solid #000; }
+.btn-primary:hover:not(:disabled) { background: #8ef994; opacity: 1; }
+.btn-ghost { border: 1px solid #000; color: #000; }
+.btn-ghost:hover:not(:disabled) { background: rgba(0,0,0,.06); }
+.pill { border-color: #000; color: #000; background: transparent; }
+button.pill:hover { background: rgba(163,253,167,.45); border-color: #000; }
+.tag { border-color: var(--slate); color: var(--fog); }
+.tag.ok { border-color: rgba(17,112,74,.5); color: var(--sage); }
+.tag.warn, .badge.warn { border-color: rgba(138,79,18,.55); color: var(--amber); }
+.badge.val, .odd.v { border-color: rgba(17,112,74,.55); color: var(--sage); }
+.badge { border-color: var(--slate); }
+.note b, .safebar b, .warn-box b, .tbl td.odds-best small { color: var(--forest); }
+.odds-best { background: rgba(163,253,167,.4); color: #000; }
+.cell.win { background: rgba(163,253,167,.35); }
+.safebar { background: var(--forest); border-bottom: 0; color: #e6f4de; }
+.safebar b { color: var(--lime); }
+.safebar a { color: #fff; }
+.filters, .chart-card, .gcard, .promo, .parlay, .panel, .evcard, .kpi, .note, .warn-box { box-shadow: var(--shadow); }
+.filters, .chart-card, .gcard, .promo, .parlay, .panel { background: #fff; border-color: transparent; }
+.note, .warn-box, .code { background: #fff; border-color: var(--graphite); }
+.evcard { background: transparent; box-shadow: none; }
+.evcard:hover, .rowlink:hover td { background: rgba(163,253,167,.28); }
+.pbar { background: var(--graphite); }
+.pbar i { opacity: 1; }
+.inp, .search, .bet-input, .seg, .ro { background: #fff; border-color: var(--slate); color: #000; }
+.inp:focus, .search:focus, .bet-input:focus-within { border-color: #000; box-shadow: 0 0 0 3px rgba(163,253,167,.7); }
+.search::placeholder { color: #838676; }
+.seg button.on { background: var(--lime); color: #000; }
+.filters select.inp option { background: #fff; color: #000; }
+.filters select.inp { background-color: #fff; background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='8' viewBox='0 0 12 8'%3E%3Cpath d='M1 1l5 5 5-5' fill='none' stroke='%23000' stroke-width='1.6'/%3E%3C/svg%3E"); }
+.dropdown { background: #fff; box-shadow: var(--shadow); border-color: var(--graphite); }
+.dropdown a:hover, .dropdown button:hover { background: rgba(163,253,167,.35); }
+.tbl th { color: var(--fog); }
+.tbl td, .tbl th { border-color: var(--graphite); }
+.ev-pos { color: var(--sage); } .ev-neg { color: var(--rose); }
+.toast { background: #fff; color: #000; box-shadow: var(--shadow); }
+#cookie-bar { background: #fff; border-color: var(--graphite); box-shadow: var(--shadow); color: var(--silver); }
+#cookie-bar .btn:last-child { background: var(--lime); border-color: #000; }
+.foot, footer.foot { border-top: 1px solid var(--graphite); }
+.foot .legal, .legal { color: var(--fog); }
+.legal a, .foot a { color: var(--forest); }
+.legal-page p, .legal-page li { color: var(--silver); }
+.backdrop .modal, .modal { background: #fff; border-color: var(--graphite); box-shadow: var(--shadow); }
+::selection { background: var(--lime); color: #000; }
+:focus-visible { outline: 2px solid #000; outline-offset: 2px; }
+input[type=range] { accent-color: #0d5b3b; }
+nav.main { align-items: center; }
+nav.main a { white-space: nowrap; padding: 7px 14px; }
+.top-in { gap: 18px; }
+.serif, .pg h1, .pg h2, .hero h1, .sec-head h2, .page h1, .legal-page h1, .stat b, .promo h3, .logo, .big-num, .paytable b, .cell, .card { font-variant-numeric: lining-nums; font-feature-settings: "lnum" 1; }
+.stat b { font-size: 52px; }
+.top-actions .tag { white-space: nowrap; font-size: 10.5px; }
+.top-actions { flex-shrink: 0; }
+.wrap.pg { padding-left: 24px; padding-right: 24px; }
+@media (max-width: 600px) { .wrap.pg { padding-left: 16px; padding-right: 16px; } }
