@@ -56,7 +56,7 @@ ok(fs.readFileSync(path.join(dist, 'robots.txt'), 'utf8').includes('Sitemap: htt
 const mdirs = fs.readdirSync(path.join(dist, 'partidos'));
 ok(mdirs.length === 2 && mdirs.every((d) => /^liga-1-peru-.*-vs-.*-\d{4}-\d{2}-\d{2}$/.test(d)), 'una página por partido próximo con slug estable (liga-equipos-fecha): ' + mdirs.join(', '));
 const mp = fs.readFileSync(path.join(dist, 'partidos', mdirs.find((d) => d.includes('beta-vs-gama')), 'index.html'), 'utf8');
-ok(/<h1>\s*Beta vs\s+Gama: pronóstico, probabilidades y cuota justa<\/h1>/.test(mp.replace(/<img[^>]*>/g, '')) && mp.includes('"@type":"SportsEvent"') && mp.includes('Forma reciente') && mp.includes('Fiabilidad del modelo'), 'página de partido: título, SportsEvent, forma y fiabilidad');
+ok(/<h1>\s*Beta vs\s+Gama: pronóstico, probabilidades y cuota justa<\/h1>/.test(mp.replace(/<img[^>]*>/g, '')) && !mp.includes('SportsEvent') && mp.includes('BreadcrumbList') && mp.includes('Forma reciente') && mp.includes('Fiabilidad del modelo'), 'página de partido: título, migas de pan, forma y fiabilidad (sin marcado de Evento)');
 ok(/ludopat/.test(mp) && /No es una apuesta segura/.test(mp), 'partido: aviso de juego responsable');
 ok(mp.includes('combiner/i?img=/i/teamlogos/soccer/500/1.png&amp;w=48') && !mp.includes('onerror'), 'escudo válido sí; ruta con inyección descartada');
 const dp = fs.readdirSync(path.join(dist, 'partidos')).map((d) => fs.readFileSync(path.join(dist, 'partidos', d, 'index.html'), 'utf8')).join('');

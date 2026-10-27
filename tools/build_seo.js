@@ -179,10 +179,9 @@ function matchPage(it, ctxIn) {
   if (h2h.length) body += '<h2>Enfrentamientos previos</h2>\n<ul>' + h2h.map((r) => '<li>' + esc(r.d) + ' · ' + esc(resultText(r)) + '</li>').join('') + '</ul>\n';
   const bt = ctxIn.BTM[lg.id];
   if (bt && bt.n >= 30) body += '<h2>Fiabilidad del modelo en esta liga</h2>\n<p>En una prueba histórica sin mirar el futuro, el modelo acertó el resultado más probable en el <b>' + pct(bt.acc) + '</b> de ' + bt.n + ' partidos de ' + esc(lg.name) + '. Acertar más que el azar no basta para ganar dinero: las casas ya descuentan esa información en sus cuotas.</p>\n';
-  const ld = { '@context': 'https://schema.org', '@type': 'SportsEvent', name: e.h + ' vs ' + e.a, startDate: e.ko, sport: lg.sportName || lg.sport, url: SITE + '/partidos/' + url + '/',
-    homeTeam: { '@type': 'SportsTeam', name: e.h }, awayTeam: { '@type': 'SportsTeam', name: e.a }, superEvent: { '@type': 'SportsEvent', name: lg.name } };
+  // Sin datos estructurados de «Evento»: Google exige lugar (location) y solo sirven para venta de entradas; no inventamos estadios.
   const desc = (pk.label + ' (' + pct(pk.p) + '), cuota justa ' + odd(pk.fairOdds) + '. Probabilidades, forma reciente y enfrentamientos previos de ' + e.h + ' vs ' + e.a + ' · ' + lg.name + '.').slice(0, 158);
-  return shell({ title: e.h + ' vs ' + e.a + ': pronóstico y cuota justa | Aurum Predictor', desc, canonical: SITE + '/partidos/' + url + '/', depth: 2, ...head, extraLd: ld,
+  return shell({ title: e.h + ' vs ' + e.a + ': pronóstico y cuota justa | Aurum Predictor', desc, canonical: SITE + '/partidos/' + url + '/', depth: 2, ...head,
     crumbs: [['Inicio', SITE + '/'], ['Ligas', SITE + '/ligas/'], [lg.name, SITE + '/ligas/' + slugs[lg.id] + '/'], [e.h + ' vs ' + e.a, SITE + '/partidos/' + url + '/']], body });
 }
 
