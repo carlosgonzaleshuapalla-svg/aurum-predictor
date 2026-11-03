@@ -78,6 +78,39 @@
       };
       const startsIn = (e) => (e.t - Date.now()) / 3600e3;
 
+      /* ---------- goles: más/menos y ambos marcan (solo fútbol) + combinada probable del día ---------- */
+      const GB = BTM._goals || null;
+      const goalsOf = (e) => (fc[e.id] && fc[e.id].info && fc[e.id].info.ou25 ? X.goalPicks(fc[e.id].info, GB && GB.cal) : []);
+      // combinada: el mejor mercado de goles de cada partido de fútbol (un partido = una selección), de más a menos probable
+      function dailyCombo(n) {
+        const todayLima = new Date().toLocaleDateString('en-CA', { timeZone: 'America/Lima' });
+        const cands = evs.filter((e) => e.t > Date.now() && spOf(e) === 'soccer' && !e.pre && fc[e.id] && fc[e.id].info.reliable !== false).map((e) => ({ e, g: goalsOf(e)[0] })).filter((c) => c.g);
+        let pool = cands.filter((c) => new Date(c.e.t).toLocaleDateString('en-CA', { timeZone: 'America/Lima' }) === todayLima), scope = 'hoy';
+        if (pool.length < n) { pool = cands.filter((c) => startsIn(c.e) <= 48); scope = 'próximas 48 horas'; }
+        if (pool.length < n) { pool = cands; scope = 'próximos días'; }
+        const legs = pool.sort((a, b) => b.g.p - a.g.p).slice(0, n);
+        return { legs, scope, joint: legs.reduce((t, c) => t * c.g.p, 1), avg: legs.length ? legs.reduce((t, c) => t + c.g.p, 0) / legs.length : 0 };
+      }
+      const riskOf = (joint) => (joint >= 0.6 ? ['Riesgo bajo', 'val'] : joint >= 0.4 ? ['Riesgo medio', ''] : ['Riesgo alto', 'warn']);
+      function comboPanel() {
+        const n = S.comboN || 4, c = dailyCombo(n);
+        const sel = h('select', { class: 'inp', 'aria-label': 'Número de selecciones', onchange: (ev) => { S.comboN = +ev.target.value; saveUI(); box.replaceWith(comboPanel()); } }, [2, 3, 4, 5].map((k) => h('option', { value: String(k) }, k + ' selecciones')));
+        sel.value = String(n);
+        const box = h('div', { class: 'combo' });
+        box.append(h('div', { class: 'combo-h' }, h('div', {}, h('div', { class: 'combo-t' }, 'Combinada probable del día'), h('div', { class: 'combo-s' }, 'Goles · ' + c.scope)), sel));
+        if (c.legs.length < 2) { box.append(h('div', { class: 'combo-b' }, h('p', { class: 'muted' }, 'No hay suficientes partidos de fútbol con pronóstico de goles para armar una combinada ahora. Prueba más tarde o revisa «Semana» en la lista.'))); return box; }
+        const [risk, rcls] = riskOf(c.joint);
+        box.append(h('div', { class: 'combo-b' },
+          h('div', { class: 'combo-kpis' },
+            h('div', { class: 'combo-k' }, h('div', { class: 'eyebrow dim' }, 'Probabilidad conjunta'), h('div', { class: 'combo-big' }, pct(c.joint, 0)), h('span', { class: 'badge ' + rcls }, risk), h('div', { class: 'meta' }, 'Cuota justa ' + od(1 / c.joint))),
+            GB && GB.n ? h('div', { class: 'combo-k dark' }, h('div', { class: 'eyebrow' }, 'Acierto del modelo'), h('div', { class: 'combo-big' }, pct(GB.acc, 0)), h('div', { class: 'meta' }, GB.hit + ' / ' + GB.n + ' picks de goles en el histórico')) : null),
+          h('div', { class: 'combo-legs' }, c.legs.map((x) => h('div', { class: 'combo-leg', role: 'button', tabindex: '0', onkeydown: (ev) => { if (ev.key === 'Enter') detail(x.e); }, onclick: () => detail(x.e) },
+            h('div', {}, h('div', { class: 'meta' }, x.e.h + ' vs ' + x.e.a), h('div', { class: 'combo-pick' }, x.g.label), h('div', { class: 'meta' }, flag(x.e.lg), lgById[x.e.lg].name + ' · ' + limaStr(x.e))),
+            h('div', { class: 'r' }, h('b', { class: 'combo-p' }, pct(x.g.p, 0)), h('div', { class: 'meta' }, 'justa ' + od(1 / x.g.p)))))),
+          h('p', { class: 'hint' }, 'Se toma el mercado de goles más probable de cada partido (más/menos de 1.5, 2.5 o 3.5, y ambos marcan), con la probabilidad recalibrada con el histórico del modelo. La conjunta multiplica las probabilidades suponiendo partidos independientes. Riesgo: bajo ≥ 60 %, medio ≥ 40 %. Son líneas «fáciles», así que las casas pagan cuotas bajas; la cuota justa es el mínimo que debería pagar tu casa. No es una recomendación ni garantiza resultados.')));
+        return box;
+      }
+
       /* ---------- tarjeta ---------- */
       function card(e) {
         const f = fc[e.id], lg = lgById[e.lg], live = e.status === 'in' || e.t < Date.now();
@@ -89,6 +122,7 @@
         return h('div', { class: 'evcard pick', role: 'button', tabindex: '0', 'aria-label': e.h + ' contra ' + e.a + ': ' + pk.label + ' ' + pct(pk.p, 0), onkeydown: openKey, onclick: () => detail(e) }, head,
           h('div', { style: 'text-align:right' }, h('div', { class: 'pickline' }, pk.label), h('div', {}, h('span', { class: 'badge ' + cls }, CONF[pk.conf]), ' ', h('b', {}, pct(pk.p, 0)), pk.fairOdds < 1.2 ? h('div', {}, h('span', { class: 'badge warn' }, 'cuota muy baja: casi no compensa')) : null)),
           h('div', { style: 'grid-column:1/-1' }, h('div', { style: 'display:flex;gap:14px;flex-wrap:wrap' }, bars),
+            goalsOf(e)[0] ? h('div', { class: 'meta', style: 'margin-top:8px' }, h('span', { class: 'badge' }, 'Goles'), ' ', h('b', {}, goalsOf(e)[0].label + ' · ' + pct(goalsOf(e)[0].p, 0))) : null,
             h('div', { class: 'meta', style: 'margin-top:8px' },
               'Cuota justa ' + od(pk.fairOdds) + ' (una casa debe pagar más que esto)' + (pk.best ? ' · tu cuota ' + od(pk.best.odds) + ' (' + pk.best.book + ') → EV ' + (pk.ev > 0 ? '+' : '') + (pk.ev * 100).toFixed(0) + ' % (estimación)' : ' · añade la cuota de tu casa para ver el valor') +
               (pk.ref ? ' · referencia ' + pk.ref.book + ' ' + od(pk.ref.odds) + ' (no apostable en Perú)' : '') + ' · base: ' + f.source + (f.info.reliable === false ? ' · pocos datos del equipo' : '') + (f.info.cross ? ' · equipos de ligas distintas: fiabilidad limitada' : '') + (e.pre ? ' · pretemporada' : '') +
@@ -164,6 +198,9 @@
             if (ff.info.altDiff != null) body.append(h('p', { class: 'hint' }, 'Altitud: ' + e.h + ' juega a mayor altura que ' + e.a + ' (≈' + ff.info.altDiff.toFixed(1) + ' km de diferencia). El modelo lo tiene en cuenta: en la Liga 1 los equipos de altura marcan más y los visitantes de llanura rinden menos.'));
             if (ff.info.lh != null) body.append(h('p', { class: 'muted', style: 'font-size:13px' }, 'Goles esperados ' + e.h + ' ' + ff.info.lh.toFixed(2) + ' · ' + e.a + ' ' + ff.info.la.toFixed(2) + ' · Más de 2.5 goles ' + pct(ff.info.ou25[0], 0) + ' · Ambos marcan ' + pct(ff.info.btts[0], 0)));
             else if (ff.info.rH != null) body.append(h('p', { class: 'muted', style: 'font-size:13px' }, 'Elo ' + e.h + ' ' + Math.round(ff.info.rH) + ' (' + ff.info.nH + ' partidos) · ' + e.a + ' ' + Math.round(ff.info.rA) + ' (' + ff.info.nA + ' partidos)'));
+            const gp = goalsOf(e);
+            if (gp.length) body.append(h('div', {}, h('div', { class: 'eyebrow dim' }, 'Goles'), h('div', { class: 'table-wrap' }, h('table', { class: 'tbl' }, h('thead', {}, h('tr', {}, ['Mercado', 'Probabilidad', 'Cuota justa'].map((c, i) => h('th', { class: i ? 'r' : '' }, c)))),
+              h('tbody', {}, gp.map((g) => h('tr', {}, h('td', {}, g.label), h('td', { class: 'r' }, h('b', {}, pct(g.p, 0))), h('td', { class: 'r muted' }, od(1 / g.p))))))), h('p', { class: 'hint' }, 'Probabilidades del modelo de goles (Poisson), recalibradas con su histórico. Una línea «fácil» como más de 1.5 es probable pero paga poco.')));
             body.append(oddsComparison(e, ff, draw));
           }
           [e.h, e.a].forEach((t) => { const lr = lastResults(e.lg, t); if (lr.length) body.append(h('div', {}, h('div', { class: 'eyebrow dim' }, 'Últimos resultados · ' + t), h('div', { class: 'meta' }, lr.map((r) => { const won = (r.w === 'h' && r.h === t) || (r.w === 'a' && r.a === t), d = r.w === 'd'; return h('span', { class: 'badge ' + (won ? 'val' : d ? '' : 'warn'), style: 'margin:2px 4px 2px 0' }, (r.h === t ? 'vs ' + r.a : '@ ' + r.h) + (r.hs != null ? ' ' + r.hs + '-' + r.as : '') + (won ? ' G' : d ? ' E' : ' P')); })))); });
@@ -229,7 +266,7 @@
         }
         root_.append(h('span', { class: 'eyebrow' }, 'Pronósticos'), h('h1', { class: 'serif' }, 'Pronósticos para ', h('em', {}, 'cada evento'), '.'),
           h('p', { class: 'lead' }, 'Elige deporte y liga. Para cada evento verás el resultado más probable, qué tan probable es y la cuota justa. “Más probable” no significa “seguro” ni “buena apuesta”: los favoritos pagan poco.'),
-          h('div', { class: 'note mt' }, h('b', {}, 'Cómo leerlo. '), hasRefOdds ? 'Las cuotas de referencia son de DraftKings (EE. UU., vía la API pública no oficial de ESPN), que no figura como autorizada en Perú: sirven para estimar la probabilidad del mercado. Para la Liga 1 y otras ligas con pocas cuotas, el pronóstico sale del modelo. Añade la cuota de tu casa para saber si paga más que la cuota justa.' : 'En la mayoría de ligas y deportes el pronóstico sale del modelo estadístico (resultados pasados de cada equipo o competidor); mira abajo, en cada tarjeta, cuánto ha acertado el modelo en esa liga. En 10 ligas europeas de fútbol, además, se comparan las cuotas de varias casas. Añade la cuota de tu casa para saber si paga más que la cuota justa. Un modelo puede equivocarse: los mercados suelen predecir mejor.'), top, list);
+          comboPanel(), h('div', { class: 'note mt' }, h('b', {}, 'Cómo leerlo. '), hasRefOdds ? 'Las cuotas de referencia son de DraftKings (EE. UU., vía la API pública no oficial de ESPN), que no figura como autorizada en Perú: sirven para estimar la probabilidad del mercado. Para la Liga 1 y otras ligas con pocas cuotas, el pronóstico sale del modelo. Añade la cuota de tu casa para saber si paga más que la cuota justa.' : 'En la mayoría de ligas y deportes el pronóstico sale del modelo estadístico (resultados pasados de cada equipo o competidor); mira abajo, en cada tarjeta, cuánto ha acertado el modelo en esa liga. En 10 ligas europeas de fútbol, además, se comparan las cuotas de varias casas. Añade la cuota de tu casa para saber si paga más que la cuota justa. Un modelo puede equivocarse: los mercados suelen predecir mejor.'), top, list);
         render(); return root_;
       }
 

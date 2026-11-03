@@ -33,15 +33,17 @@
     return M;
   }
   function marketsFromMatrix(M, drawBoost) {
-    let h = 0, d = 0, a = 0, over = 0, btts = 0;
+    let h = 0, d = 0, a = 0, over = 0, btts = 0, o15 = 0, o35 = 0;
     for (let i = 0; i <= MAXG; i++) for (let j = 0; j <= MAXG; j++) {
       const p = M[i][j];
       if (i > j) h += p; else if (i === j) d += p; else a += p;
       if (i + j >= 3) over += p;
+      if (i + j >= 2) o15 += p;
+      if (i + j >= 4) o35 += p;
       if (i > 0 && j > 0) btts += p;
     }
     if (drawBoost && drawBoost !== 1) { const d2 = d * drawBoost, t = h + a + d2; h /= t; a /= t; d = d2 / t; } // ajuste de empates (los modelos de Poisson suelen subestimarlos)
-    return { p1x2: [h, d, a], ou25: [over, 1 - over], btts: [btts, 1 - btts] };
+    return { p1x2: [h, d, a], ou25: [over, 1 - over], ou15: [o15, 1 - o15], ou35: [o35, 1 - o35], btts: [btts, 1 - btts] };
   }
 
   // Efecto de altitud: x = diferencia de altitud (km) entre la sede local y la del visitante (0 si no se conoce alguna)

@@ -64,6 +64,9 @@ ok(!dp.includes('<b>Delta</b>') && dp.includes('&lt;b&gt;Delta&lt;/b&gt;'), 'par
 const mn = fs.readFileSync(path.join(dist, 'pronosticos-manana', 'index.html'), 'utf8'), hy = fs.readFileSync(path.join(dist, 'pronosticos-hoy', 'index.html'), 'utf8');
 ok(mn.includes('Beta – Gama') && !mn.includes('Alfa –'), 'mañana: lista solo los partidos de mañana (Lima)');
 ok(hy.includes('Pronósticos deportivos de hoy') && sm.includes('/pronosticos-hoy/') && sm.includes('/partidos/' + mdirs[0] + '/'), 'hoy existe y el sitemap incluye hoy, mañana y partidos');
+ok(mp.includes('Pronóstico de goles') && mp.includes('Más de 1.5 goles') && mp.includes('Ambos marcan'), 'página de partido de fútbol: sección de goles con los 8 mercados');
+const mdFut = fs.readdirSync(path.join(dist, 'partidos')).map((d) => fs.readFileSync(path.join(dist, 'partidos', d, 'index.html'), 'utf8'));
+ok(!hy.includes('<script>') && (hy.includes('Combinada probable de goles') || !fs.readFileSync(path.join(dist, 'pronosticos-manana', 'index.html'), 'utf8').includes('<script>')), 'día: la combinada de goles aparece sin inyectar HTML');
 let threw = false; try { S.build(path.join(dist, 'nada')); } catch (e) { threw = true; }
 ok(threw, 'sin dist/ publicado falla con un mensaje claro');
 fs.rmSync(dist, { recursive: true, force: true });

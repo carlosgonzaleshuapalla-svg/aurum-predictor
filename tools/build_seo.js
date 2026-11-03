@@ -157,6 +157,18 @@ function lastGames(res, team, n) {
   });
 }
 
+// mercados de goles de un pronóstico de fútbol, con la calibración del histórico (BTM._goals.cal)
+function goalsOf(f, BTM) { return f && f.info && f.info.ou25 ? require('../js/multimodel.js').goalPicks(f.info, BTM && BTM._goals && BTM._goals.cal) : []; }
+
+// combinada probable: el mejor mercado de goles de cada partido de fútbol del día (un partido = una selección)
+function comboHtml(list, ctxIn, prefix) {
+  const legs = list.filter((it) => it.f.sport === 'soccer' && !it.e.pre && it.f.info.reliable !== false).map((it) => ({ it, g: goalsOf(it.f, ctxIn.BTM)[0] })).filter((c) => c.g).sort((a, b) => b.g.p - a.g.p).slice(0, 4);
+  if (legs.length < 2) return '';
+  const joint = legs.reduce((t, c) => t * c.g.p, 1), risk = joint >= 0.6 ? 'riesgo bajo' : joint >= 0.4 ? 'riesgo medio' : 'riesgo alto', G = ctxIn.BTM._goals;
+  return '<h2>Combinada probable de goles</h2>\n<p>Las ' + legs.length + ' selecciones de goles más probables de los partidos de fútbol con pronóstico. Probabilidad conjunta: <b>' + pct(joint) + '</b> (' + risk + '), cuota justa <b>' + odd(1 / joint) + '</b>.' + (G && G.n ? ' El mercado de goles más probable acertó ' + pct(G.acc) + ' en ' + G.n + ' partidos históricos.' : '') + '</p>\n<ul>' +
+    legs.map((c) => '<li><a href="' + prefix + 'partidos/' + c.it.url + '/" style="text-decoration:underline">' + esc(c.it.e.h) + ' vs ' + esc(c.it.e.a) + '</a>: <b>' + esc(c.g.label) + '</b> (' + pct(c.g.p) + ', cuota justa ' + odd(1 / c.g.p) + ')</li>').join('') + '</ul>\n<p class="hint">Se multiplican las probabilidades suponiendo partidos independientes. Son líneas fáciles que pagan cuotas bajas; no es una apuesta segura ni una recomendación.</p>\n';
+}
+
 function matchPage(it, ctxIn) {
   const { M, slugs, head } = ctxIn;
   const { e, lg, f, url } = it, pk = f.pick, res = it.res;
@@ -172,6 +184,9 @@ function matchPage(it, ctxIn) {
   body += '<h2>Probabilidades y cuota justa</h2>\n<div class="table-wrap"><table class="tbl"><thead><tr><th>Resultado</th><th class="r">Probabilidad</th><th class="r">Cuota justa</th></tr></thead><tbody>' +
     f.labels.map((l, i) => '<tr><td>' + (i === pk.i ? '<b>' + esc(l) + '</b>' : esc(l)) + '</td><td class="r">' + pct(f.p[i]) + '</td><td class="r">' + odd(1 / f.p[i]) + '</td></tr>').join('') + '</tbody></table></div>\n';
   body += '<p class="hint">Cuota justa = 1 ÷ probabilidad. ' + (f.info && f.info.reliable === false ? 'Hay pocos datos de alguno de los equipos: tómalo con cautela. ' : '') + (f.info && f.info.cross ? 'Los equipos vienen de ligas distintas: la fiabilidad es limitada. ' : '') + 'En el comparador completo puedes añadir la cuota de tu casa para ver si paga más que la justa.</p>\n';
+  const gp = goalsOf(f, ctxIn.BTM);
+  if (gp.length) body += '<h2>Pronóstico de goles</h2>\n<p>Para ' + esc(e.h) + ' vs ' + esc(e.a) + ' el modelo espera ' + f.info.lh.toFixed(1).replace('.', ',') + ' goles del local y ' + f.info.la.toFixed(1).replace('.', ',') + ' de la visita. El mercado de goles más probable es <b>' + esc(gp[0].label) + '</b> (' + pct(gp[0].p) + ').</p>\n<div class="table-wrap"><table class="tbl"><thead><tr><th>Mercado</th><th class="r">Probabilidad</th><th class="r">Cuota justa</th></tr></thead><tbody>' +
+    gp.map((g) => '<tr><td>' + esc(g.label) + '</td><td class="r">' + pct(g.p) + '</td><td class="r">' + odd(1 / g.p) + '</td></tr>').join('') + '</tbody></table></div>\n<p class="hint">Modelo de goles de Poisson recalibrado con su histórico. Las líneas «fáciles» (más de 1.5, menos de 3.5) son probables pero pagan poco.</p>\n';
   body += '<p><a href="../../" style="text-decoration:underline">Abrir el comparador completo →</a></p>\n';
   const fh = lastGames(res, e.h, 5), fa = lastGames(res, e.a, 5);
   if (fh.length || fa.length) body += '<h2>Forma reciente</h2>\n<div class="pgrid2"><div><h3>' + esc(e.h) + '</h3><ul>' + fh.join('') + '</ul></div><div><h3>' + esc(e.a) + '</h3><ul>' + fa.join('') + '</ul></div></div>\n<p class="hint">G = ganó, E = empató, P = perdió.</p>\n';
@@ -193,6 +208,7 @@ function dayPage(kind, ymd, items, ctxIn) {
   let body = '<h1>Pronósticos deportivos de ' + label + ': ' + esc(limaLong(ymd)) + '</h1>\n<p class="muted">Hora de Lima · actualizado ' + esc((M.generated || '').slice(0, 10)) + ' · se recalcula cada 8 horas.</p>\n';
   body += '<p>Probabilidad de cada resultado y cuota justa para los partidos de ' + label + ' en las ligas que cubre Aurum Predictor. Son estimaciones de un modelo estadístico, no apuestas seguras: un 70 % de probabilidad significa que 3 de cada 10 veces el resultado es otro.</p>\n';
   if (!list.length) body += '<p class="muted">No hay partidos con pronóstico para ' + label + ' en las ligas cubiertas. Mira <a href="../ligas/" style="text-decoration:underline">las ligas</a> o <a href="../pronosticos-' + (hoy ? 'manana' : 'hoy') + '/" style="text-decoration:underline">los pronósticos de ' + (hoy ? 'mañana' : 'hoy') + '</a>.</p>\n';
+  body += comboHtml(list, ctxIn, '../');
   const byLg = new Map();
   for (const it of list.slice(0, 250)) { if (!byLg.has(it.lg.id)) byLg.set(it.lg.id, []); byLg.get(it.lg.id).push(it); }
   for (const [id, arr] of byLg) {

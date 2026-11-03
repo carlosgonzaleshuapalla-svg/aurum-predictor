@@ -163,9 +163,9 @@
       const pr = Mo.predictMatch(ctx.fits[ev.lg], kh, ka, 5);
       if (pr && ev.neutral) { // sede neutral: se promedia con el partido invertido para quitar la ventaja de local
         const q = Mo.predictMatch(ctx.fits[ev.lg], ka, kh, 5);
-        if (q) { pr.p1x2 = [(pr.p1x2[0] + q.p1x2[2]) / 2, (pr.p1x2[1] + q.p1x2[1]) / 2, (pr.p1x2[2] + q.p1x2[0]) / 2]; pr.ou25 = [(pr.ou25[0] + q.ou25[0]) / 2, (pr.ou25[1] + q.ou25[1]) / 2]; pr.btts = [(pr.btts[0] + q.btts[0]) / 2, (pr.btts[1] + q.btts[1]) / 2]; const lh = (pr.lh + q.la) / 2, la = (pr.la + q.lh) / 2; pr.lh = lh; pr.la = la; }
+        if (q) { pr.p1x2 = [(pr.p1x2[0] + q.p1x2[2]) / 2, (pr.p1x2[1] + q.p1x2[1]) / 2, (pr.p1x2[2] + q.p1x2[0]) / 2]; pr.ou25 = [(pr.ou25[0] + q.ou25[0]) / 2, (pr.ou25[1] + q.ou25[1]) / 2]; pr.ou15 = [(pr.ou15[0] + q.ou15[0]) / 2, (pr.ou15[1] + q.ou15[1]) / 2]; pr.ou35 = [(pr.ou35[0] + q.ou35[0]) / 2, (pr.ou35[1] + q.ou35[1]) / 2]; pr.btts = [(pr.btts[0] + q.btts[0]) / 2, (pr.btts[1] + q.btts[1]) / 2]; const lh = (pr.lh + q.la) / 2, la = (pr.la + q.lh) / 2; pr.lh = lh; pr.la = la; }
       }
-      if (pr) { model = pr.p1x2; info = { lh: pr.lh, la: pr.la, ou25: pr.ou25, btts: pr.btts, reliable: true }; const dx = ev.neutral ? null : altDiff(ev.lg, ev.h, ev.a); if (dx != null && dx >= 0.5) info.altDiff = dx; }
+      if (pr) { model = pr.p1x2; info = { lh: pr.lh, la: pr.la, ou15: pr.ou15, ou25: pr.ou25, ou35: pr.ou35, btts: pr.btts, reliable: true }; const dx = ev.neutral ? null : altDiff(ev.lg, ev.h, ev.a); if (dx != null && dx >= 0.5) info.altDiff = dx; }
     } else {
       const ep = eloProb(ctx.elo[ev.lg], sp, ev.h, ev.a, ev.neutral, (ev.ko || '').slice(0, 10));
       if (ep) { model = [ep.p, 1 - ep.p]; info = { rH: ep.rH, rA: ep.rA, nH: ep.nH, nA: ep.nA, reliable: ep.reliable }; }
@@ -260,6 +260,54 @@
     return out;
   }
 
+
+  /* ---------- Mercados de goles (solo fútbol): más/menos de 1.5, 2.5 y 3.5, y ambos marcan ----------
+     El Poisson sobrestima las probabilidades extremas (p. ej. «más de 1.5» al 98 %). Cada mercado se recalibra con una
+     regresión logística (Platt) ajustada al histórico y validada fuera de muestra; si no mejora, no se aplica. */
+  const GOAL_MK = [
+    { k: 'o15', info: 'ou15', i: 0, label: 'Más de 1.5 goles' }, { k: 'u15', info: 'ou15', i: 1, label: 'Menos de 1.5 goles' },
+    { k: 'o25', info: 'ou25', i: 0, label: 'Más de 2.5 goles' }, { k: 'u25', info: 'ou25', i: 1, label: 'Menos de 2.5 goles' },
+    { k: 'o35', info: 'ou35', i: 0, label: 'Más de 3.5 goles' }, { k: 'u35', info: 'ou35', i: 1, label: 'Menos de 3.5 goles' },
+    { k: 'bs', info: 'btts', i: 0, label: 'Ambos marcan: Sí' }, { k: 'bn', info: 'btts', i: 1, label: 'Ambos marcan: No' },
+  ];
+  const logit = (p) => { p = Math.min(1 - 1e-6, Math.max(1e-6, p)); return Math.log(p / (1 - p)); };
+  const applyPlatt = (c, p) => (c ? 1 / (1 + Math.exp(-(c.a + c.b * logit(p)))) : p);
+  // candidatos de goles de un pronóstico: [{k,label,p,raw}] ordenados de más a menos probable (p calibrada con cal = {k:{a,b}})
+  function goalPicks(info, cal) {
+    if (!info || !info.ou25) return [];
+    return GOAL_MK.map((m) => { const raw = info[m.info] && info[m.info][m.i]; return raw == null ? null : { k: m.k, label: m.label, raw, p: applyPlatt(cal && cal[m.k], raw) }; }).filter(Boolean).sort((a, b) => b.p - a.p);
+  }
+  // filas {m, p, y} de cada mercado en cada partido de la segunda mitad (mismo recorrido que backtestLeague, sin prórrogas)
+  function backtestGoals(results, sport, testFrom, fopts) {
+    if (!isGoals(sport) || !results.length) return [];
+    fopts = Object.assign({}, LEAGUE_OPTS[results[0].lg], fopts);
+    const ms = results.filter((r) => usable(r, sport) && r.hs != null).slice().sort((a, b) => a.d.localeCompare(b.d)).map((r) => ({ d: r.d, h: r.h, a: r.a, hg: r.hs, ag: r.as, ot: r.ot }));
+    const rows = []; let fit = null, fitDay = -1e9;
+    for (const m of ms) {
+      if (m.d < testFrom || m.ot) continue;
+      const dn = Mo.dayNum(m.d); if (dn - fitDay >= 14) { fit = Mo.fitLeague(ms, m.d, Object.assign({ k: 3 }, fopts)); fitDay = dn; }
+      const pr = Mo.predictMatch(fit, m.h, m.a, 5); if (!pr) continue;
+      const tot = m.hg + m.ag, real = { ou15: tot >= 2, ou25: tot >= 3, ou35: tot >= 4, btts: m.hg > 0 && m.ag > 0 };
+      const one = [];
+      for (const g of GOAL_MK) { const y = real[g.info] === (g.i === 0) ? 1 : 0; one.push({ m: g.k, p: pr[g.info][g.i], y }); }
+      rows.push({ k: m.d + '|' + m.h, one });
+    }
+    return rows;
+  }
+  // ajuste logístico p' = σ(a + b·logit p) por descenso de gradiente (Newton con 2 parámetros)
+  function fitPlatt(items) {
+    if (!items || items.length < 200) return null;
+    let a = 0, b = 1;
+    for (let it = 0; it < 40; it++) {
+      let ga = 0, gb = 0, haa = 1e-6, hab = 0, hbb = 1e-6;
+      for (const t of items) { const x = logit(t.p), q = 1 / (1 + Math.exp(-(a + b * x))), w = q * (1 - q); ga += q - t.y; gb += (q - t.y) * x; haa += w; hab += w * x; hbb += w * x * x; }
+      const det = haa * hbb - hab * hab; if (Math.abs(det) < 1e-12) break;
+      const da = (hbb * ga - hab * gb) / det, db = (haa * gb - hab * ga) / det; a -= da; b -= db;
+      if (Math.abs(da) + Math.abs(db) < 1e-7) break;
+    }
+    return { a: Math.round(a * 1e4) / 1e4, b: Math.round(b * 1e4) / 1e4 };
+  }
+
   /* ---------- Unir nombres de equipos entre fuentes (ESPN ↔ football-data) ---------- */
   const STOP = new Set(['fc', 'cf', 'afc', 'sc', 'ac', 'as', 'ssc', 'cd', 'club', 'de', 'the', 'ud', 'sv', 'fk', 'bk', 'if', 'sk', 'vfb', 'vfl', 'tsg', 'rb', 'us', 'ca']);
   const ALIAS = { qpr: 'queens park rangers', 'm gladbach': 'monchengladbach', koln: 'cologne', 'sp lisbon': 'sporting cp', buyuksehyr: 'istanbul basaksehir', 'man united': 'manchester united', 'man city': 'manchester city', 'ath madrid': 'atletico madrid', 'ath bilbao': 'athletic club', 'espanol': 'espanyol', 'vallecano': 'rayo vallecano', 'betis': 'real betis', 'sociedad': 'real sociedad' };
@@ -285,7 +333,7 @@
     return best && best.o;
   }
 
-  const api = { ALT_PERU, LEAGUE_OPTS, altDiff, filterBooksByMarket, isExchange, makeKeyer, normTeam, teamSim, matchEvent, fitGlobal, fitView, backtestGlobal, summarize, isPreseasonDate, isCross, calib, fitTemp, SPORT, cfgOf, isGoals, eloRun, eloProb, expected, marketProbs, buildContext, forecast, backtestLeague };
+  const api = { GOAL_MK, goalPicks, backtestGoals, fitPlatt, applyPlatt, ALT_PERU, LEAGUE_OPTS, altDiff, filterBooksByMarket, isExchange, makeKeyer, normTeam, teamSim, matchEvent, fitGlobal, fitView, backtestGlobal, summarize, isPreseasonDate, isCross, calib, fitTemp, SPORT, cfgOf, isGoals, eloRun, eloProb, expected, marketProbs, buildContext, forecast, backtestLeague };
   if (typeof module !== 'undefined' && module.exports) module.exports = api;
   root.SLMulti = api;
 })(typeof window !== 'undefined' ? window : globalThis);

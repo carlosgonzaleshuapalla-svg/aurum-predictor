@@ -125,5 +125,22 @@ ok(X.fitTemp([]) === 1, 'sin datos suficientes → 1');
 const fT = X.forecast(ctx, { id: 'c', lg: 'basketball/x', h: 'Alfa', a: 'Gama', odds: null }, { temp: { basketball: 0.5 } }), fN = X.forecast(ctx, { id: 'c', lg: 'basketball/x', h: 'Alfa', a: 'Gama', odds: null });
 ok(fT.pick.p < fN.pick.p, 'forecast aplica la calibración por deporte');
 
+console.log('[X5] Goles: mercados, calibración y backtest');
+ok(near(sf.info.ou15[0] + sf.info.ou15[1], 1, 1e-9) && sf.info.ou15[0] > sf.info.ou25[0] && sf.info.ou25[0] > sf.info.ou35[0], 'más de 1.5 ≥ más de 2.5 ≥ más de 3.5');
+const gpk = X.goalPicks(sf.info, null);
+ok(gpk.length === 8 && gpk.every((g, i) => i === 0 || gpk[i - 1].p >= g.p) && near(gpk.find((g) => g.k === 'o25').p + gpk.find((g) => g.k === 'u25').p, 1, 1e-9), 'goalPicks: 8 mercados ordenados, complementarios suman 1');
+const pc = X.goalPicks(sf.info, { o15: { a: 0, b: 0.5 } }).find((g) => g.k === 'o15');
+ok(pc.p < pc.raw && pc.p > 0.5, 'calibración suaviza una probabilidad extrema');
+ok(X.goalPicks({}, null).length === 0 && X.goalPicks(null, null).length === 0, 'sin datos de goles no inventa');
+const grows = X.backtestGoals(sres, 'soccer', day(150));
+ok(grows.length > 100 && grows[0].one.length === 8, 'backtestGoals produce filas de 8 mercados (n=' + grows.length + ')');
+const o25rows = grows.flatMap((r) => r.one.filter((o) => o.m === 'o25')), u25rows = grows.flatMap((r) => r.one.filter((o) => o.m === 'u25'));
+ok(o25rows.every((o, i) => o.y + u25rows[i].y === 1), 'más y menos son complementarios en lo real');
+// modelo sobreconfiado a propósito: dice 90 % pero acierta 75 % → Platt debe bajar la probabilidad
+const sobre = []; for (let i = 0; i < 800; i++) sobre.push({ p: i % 2 ? 0.9 : 0.1, y: (i % 2 ? i % 8 !== 1 : i % 8 === 0) ? 1 : 0 });
+const pl = X.fitPlatt(sobre);
+ok(pl && Number.isFinite(pl.a) && X.applyPlatt(pl, 0.9) < 0.85 && X.applyPlatt(pl, 0.9) > 0.65, 'Platt corrige un modelo sobreconfiado (0.90 → ' + X.applyPlatt(pl, 0.9).toFixed(2) + ')');
+ok(X.fitPlatt(o25rows.slice(0, 50)) === null, 'pocos datos → no calibra');
+
 console.log(fails ? `\nMULTI FALLÓ (${fails})` : '\nMULTI OK');
 process.exit(fails ? 1 : 0);

@@ -46,6 +46,28 @@ out._global = { cross: better(cmp.cross), all: better(cmp.domestic), compare: cm
 // lo que se muestra por liga usa el ajuste que realmente se aplica
 for (const lg of soccerLgs) { const useG = (X.isCross(lg) && out._global.cross) || out._global.all; if (useG && glob[lg] && out[lg]) { const g = glob[lg]; out[lg] = Object.assign(out[lg], { n: g.n, acc: g.acc, baseAcc: g.baseAcc, logloss: g.logloss, brier: g.brier, testFrom: tf, global: true }); } }
 console.log('ajuste global vs por liga, partidos comunes (mejora = log-loss ahorrado; ee = error estándar):', JSON.stringify(cmp), '→ usar global:', JSON.stringify({ cross: out._global.cross, all: out._global.all }));
+
+// Mercados de goles (más/menos 1.5-2.5-3.5 y ambos marcan): se recalibra cada mercado con los partidos pares y se mide en los impares
+const goalRows = [];
+for (const lg of Object.keys(by)) {
+  const rs = by[lg].sort((a, b) => a.d.localeCompare(b.d)); if (rs.length < 60 || (sportOf[lg] || lg.split('/')[0]) !== 'soccer') continue;
+  goalRows.push(...X.backtestGoals(rs, 'soccer', rs[Math.floor(rs.length * 0.45)].d));
+}
+const gEven = goalRows.filter((_, i) => i % 2 === 0), gOdd = goalRows.filter((_, i) => i % 2 === 1), gCal = {}, gMk = {};
+const llg = (arr, c) => arr.reduce((a, t) => { const p = X.applyPlatt(c, t.p); return a - Math.log(Math.max(t.y ? p : 1 - p, 1e-9)); }, 0) / (arr.length || 1);
+for (const g of X.GOAL_MK) {
+  const fe = gEven.flatMap((r) => r.one.filter((o) => o.m === g.k)), fo = gOdd.flatMap((r) => r.one.filter((o) => o.m === g.k)), c = X.fitPlatt(fe);
+  const antes = llg(fo, null), despues = c ? llg(fo, c) : antes;
+  gMk[g.k] = { n: fo.length, antes: +antes.toFixed(4), despues: +despues.toFixed(4), usa: !!c && antes - despues >= 0.002 };
+  if (gMk[g.k].usa) gCal[g.k] = c; // solo si mejora fuera de muestra
+}
+let gHit = 0, gN = 0; const gBins = {};
+for (const r of gOdd) { // pick de la web: el mercado de goles más probable (ya calibrado) de cada partido
+  let best = null; for (const o of r.one) { const p = X.applyPlatt(gCal[o.m], o.p); if (!best || p > best.p) best = { p, y: o.y }; }
+  gN++; gHit += best.y; const b = Math.min(9, Math.floor(best.p * 10)), x = (gBins[b] = gBins[b] || { n: 0, hit: 0, pm: 0 }); x.n++; x.hit += best.y; x.pm += best.p;
+}
+out._goals = { n: gN, hit: gHit, acc: gN ? gHit / gN : 0, cal: gCal, mercados: gMk, bins: gBins };
+console.log('goles: acierto del pick de goles', gHit + '/' + gN, (gN ? (100 * gHit / gN).toFixed(1) : '-') + ' %', JSON.stringify(gMk));
 out._temp = temp;
 const wr = (f, c) => { const t = path.join(dir, f + '.tmp'); fs.writeFileSync(t, c); fs.renameSync(t, path.join(dir, f)); }; // escritura atómica
 wr('backtest_multi.json', JSON.stringify(out, null, 1));
