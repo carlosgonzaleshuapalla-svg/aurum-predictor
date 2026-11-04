@@ -65,6 +65,13 @@ const mn = fs.readFileSync(path.join(dist, 'pronosticos-manana', 'index.html'), 
 ok(mn.includes('Beta – Gama') && !mn.includes('Alfa –'), 'mañana: lista solo los partidos de mañana (Lima)');
 ok(hy.includes('Pronósticos deportivos de hoy') && sm.includes('/pronosticos-hoy/') && sm.includes('/partidos/' + mdirs[0] + '/'), 'hoy existe y el sitemap incluye hoy, mañana y partidos');
 ok(mp.includes('Pronóstico de goles') && mp.includes('Más de 1.5 goles') && mp.includes('Ambos marcan'), 'página de partido de fútbol: sección de goles con los 8 mercados');
+const gdir = path.join(dist, 'guias'), gslugs = fs.readdirSync(gdir).filter((d) => fs.statSync(path.join(gdir, d)).isDirectory());
+ok(gslugs.length >= 8 && gslugs.every((d) => { const t = fs.readFileSync(path.join(gdir, d, 'index.html'), 'utf8'); return /<h1>/.test(t) && t.includes('BreadcrumbList') && t.replace(/<[^>]+>/g, ' ').split(/\s+/).length > 350; }), 'guías: al menos 8, con h1, migas y más de 350 palabras');
+const metod = fs.readFileSync(path.join(dist, 'metodologia', 'index.html'), 'utf8');
+ok(metod.includes('Metodología') && metod.includes('Acierto del modelo') && !metod.includes('undefined') && !metod.includes('NaN'), 'metodología: tabla de acierto sin valores vacíos');
+ok(fs.readFileSync(path.join(dist, 'contacto', 'index.html'), 'utf8').includes('github.com') && fs.readFileSync(path.join(dist, 'acerca', 'index.html'), 'utf8').includes('No aceptamos apuestas'), 'contacto y acerca de existen');
+ok(sm.includes('/guias/' + gslugs[0] + '/') && sm.includes('/metodologia/') && sm.includes('/acerca/') && sm.includes('/contacto/'), 'el sitemap incluye guías, metodología, acerca y contacto');
+ok(!/\b(undefined|NaN)\b/.test(gslugs.map((d) => fs.readFileSync(path.join(gdir, d, 'index.html'), 'utf8')).join('')), 'guías sin undefined ni NaN');
 const mdFut = fs.readdirSync(path.join(dist, 'partidos')).map((d) => fs.readFileSync(path.join(dist, 'partidos', d, 'index.html'), 'utf8'));
 ok(!hy.includes('<script>') && (hy.includes('Combinada probable de goles') || !fs.readFileSync(path.join(dist, 'pronosticos-manana', 'index.html'), 'utf8').includes('<script>')), 'día: la combinada de goles aparece sin inyectar HTML');
 let threw = false; try { S.build(path.join(dist, 'nada')); } catch (e) { threw = true; }
