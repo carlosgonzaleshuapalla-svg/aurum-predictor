@@ -3,6 +3,8 @@
    con los mismos datos publicados; no hay cifras escritas a mano que puedan quedar desactualizadas. */
 const REPO_ISSUES = 'https://github.com/carlosgonzaleshuapalla-svg/aurum-predictor/issues';
 const UPDATED = 'noviembre de 2026';
+const MESES = ['enero', 'febrero', 'marzo', 'abril', 'mayo', 'junio', 'julio', 'agosto', 'septiembre', 'octubre', 'noviembre', 'diciembre'];
+const dmy = (ymd) => { const [y, m, d] = ymd.split('-').map(Number); return d + ' de ' + MESES[m - 1] + ' de ' + y; };
 const pc = (x, d) => (x * 100).toFixed(d == null ? 0 : d).replace('.', ',') + ' %';
 const fmt = (n) => String(Math.round(n)).replace(/\B(?=(\d{3})+(?!\d))/g, '.');
 
@@ -237,6 +239,157 @@ const GUIAS = [
 <h2>Lo que este sitio no hace</h2>
 <p>Aurum Predictor no acepta apuestas ni mueve dinero. Sus pronósticos son estimaciones y <b>no garantizan resultados</b>. La mayoría de personas que apuestan pierde a largo plazo por el margen de las casas; entiéndelo antes de empezar.</p>`,
   },
+  {
+    slug: 'handicap-asiatico-que-significa', published: '2026-11-05', title: 'Hándicap asiático: qué significa −0,5, −1 y −0,25 (con ejemplos)',
+    desc: 'El hándicap asiático reparte ventaja entre favorito y rival para igualar el partido. Entiende cómo se paga cada línea, incluida la devolución y las medias líneas.',
+    rel: ['que-es-la-cuota-justa', 'como-leer-cuotas-decimales'],
+    body: () => `
+<p>El hándicap asiático es un mercado que «quita el empate» y reparte una ventaja o una desventaja de goles entre los dos equipos. La idea es igualar el partido: si un equipo es muy favorito, empieza perdiendo por un gol (o por medio gol) para que pagar por él tenga más sentido.</p>
+<h2>Las líneas enteras y las de medio gol</h2>
+<ul>
+<li><b>−0,5</b> al favorito: el favorito tiene que ganar. Si empata o pierde, pierdes la apuesta. Es como apostar a «gana», pero sin el empate como opción de la casa.</li>
+<li><b>+0,5</b> al rival: gana si el rival gana o empata. Solo pierdes si el favorito gana.</li>
+<li><b>−1</b> al favorito: si gana por dos goles o más, ganas. Si gana por <b>exactamente un gol</b>, te devuelven la apuesta (ni ganas ni pierdes). Si empata o pierde, pierdes.</li>
+<li><b>+1</b> al rival: si pierde por un gol, te devuelven la apuesta; si empata o gana, ganas; si pierde por dos o más, pierdes.</li>
+<li><b>0 (empate no válido)</b>: si el equipo gana, ganas; si empata, te devuelven la apuesta; si pierde, pierdes.</li>
+</ul>
+<h2>Las líneas de cuarto: −0,25 y +0,25</h2>
+<p>Parecen raras, pero son sencillas: la apuesta se parte en dos mitades iguales en las líneas vecinas.</p>
+<ul>
+<li><b>−0,25</b> = mitad en 0 y mitad en −0,5. Si el equipo gana, ganas las dos mitades. Si empata, la mitad en 0 se devuelve y la mitad en −0,5 se pierde: pierdes media apuesta. Si pierde, pierdes todo.</li>
+<li><b>+0,25</b> = mitad en 0 y mitad en +0,5. Si el equipo gana, ganas todo. Si empata, la mitad en 0 se devuelve y la mitad en +0,5 gana: cobras media ganancia. Si pierde, pierdes todo.</li>
+<li>Con <b>−0,75</b> y <b>+0,75</b> pasa lo mismo con −0,5/−1 y +0,5/+1: con −0,75, ganar por un solo gol da media ganancia; con +0,75, perder por un solo gol da media pérdida.</li>
+</ul>
+<h2>Un ejemplo con números</h2>
+<p>Apuestas S/ 100 a un favorito con hándicap −1 y cuota 2,00. Resultados posibles:</p>
+<table class="tbl"><thead><tr><th>El favorito…</th><th class="r">Resultado de tu apuesta</th></tr></thead><tbody>
+<tr><td>gana 3-0</td><td class="r">ganas S/ 100</td></tr>
+<tr><td>gana 1-0</td><td class="r">te devuelven S/ 100</td></tr>
+<tr><td>empata</td><td class="r">pierdes S/ 100</td></tr>
+<tr><td>pierde</td><td class="r">pierdes S/ 100</td></tr></tbody></table>
+<h2>Por qué se usa</h2>
+<ul>
+<li>Reduce el peso del empate y deja un mercado casi de dos resultados.</li>
+<li>Los márgenes suelen ser menores que en el 1X2 de las ligas grandes.</li>
+<li>La devolución protege parte de la apuesta, pero <b>no cambia el margen de la casa</b>: sigue mandando la cuota justa.</li>
+</ul>
+<h2>Cómo pensarlo con probabilidades</h2>
+<p>Cada línea es un mercado distinto, con su propia probabilidad. «Favorito −1» es menos probable que «favorito gana», porque exige más. Con las probabilidades que ves en el sitio puedes estimar la cuota justa de cada línea: la probabilidad de ganar por dos o más es menor que la de ganar, y su cuota justa sube en la misma proporción. Hoy Aurum Predictor no pronostica el hándicap; usa esta guía solo para entender cómo lo muestran las casas.</p>`,
+  },
+  {
+    slug: 'por-que-fallan-los-favoritos-azar-y-deportes', published: '2026-11-12', title: 'Por qué fallan los favoritos: el azar pesa distinto en cada deporte',
+    desc: 'En baloncesto el favorito gana mucho más que en fútbol o béisbol. Explicamos por qué y mostramos cuánto acierta nuestro modelo en cada deporte.',
+    rel: ['calibracion-por-que-un-modelo-sobreestima', 'mas-de-1-5-goles-por-que-paga-poco'],
+    body: (st) => {
+      const by = Object.fromEntries(st.sports.map((s) => [s.name, s]));
+      const f = (n) => (by[n] ? pc(by[n].acc, 1) : 'sin datos');
+      return `
+<p>Todos conocemos partidos en los que el equipo débil ganó. Pero no todos los deportes dan la misma cantidad de sorpresas. Entender por qué ayuda a no sobreestimar a los favoritos.</p>
+<h2>La regla: más acciones, menos azar</h2>
+<p>Un resultado deportivo mezcla habilidad y suerte. Cada vez que se anota, el equipo mejor tiene una oportunidad de imponerse; si se anota muchas veces, las pequeñas rachas de suerte se compensan y gana el que tiene más calidad. Si se anota pocas veces, un solo gol afortunado, un rebote o un error arbitral decide el partido.</p>
+<ul>
+<li><b>Baloncesto:</b> decenas de canastas por partido. El mejor equipo gana casi siempre.</li>
+<li><b>Fútbol:</b> unos 2,5 goles por partido. Un solo gol cambia todo, y además existe el empate.</li>
+<li><b>Béisbol y hockey:</b> pocas carreras o goles y mucha incertidumbre en cada jugada, incluso entre equipos de nivel distinto.</li>
+</ul>
+<h2>Lo que mide nuestro modelo</h2>
+<p>En la prueba larga (siempre prediciendo sin conocer el resultado), el resultado más probable acertó:</p>
+<table class="tbl"><thead><tr><th>Deporte</th><th class="r">Acierto del modelo</th><th class="r">Referencia simple</th></tr></thead><tbody>
+${st.sports.map((s) => `<tr><td>${s.name}</td><td class="r"><b>${pc(s.acc, 1)}</b></td><td class="r muted">${pc(s.base, 1)}</td></tr>`).join('')}</tbody></table>
+<p class="hint">Referencia simple: «gana siempre el local» o, en tenis y MMA, lanzar una moneda.</p>
+<p>En fútbol el acierto es de ${f('Fútbol')}, porque hay tres resultados posibles y el empate es frecuente; en baloncesto sube a ${f('Baloncesto')}. No es que el modelo sea «mejor» en baloncesto: es que el deporte es menos aleatorio.</p>
+<h2>Qué cambia para ti</h2>
+<ul>
+<li><b>No confundas acierto con ventaja.</b> Que un deporte se pueda predecir más no significa que se pueda ganar dinero apostando: las cuotas ya lo reflejan.</li>
+<li><b>Un favorito de 80 % falla 2 de cada 10 veces.</b> En una combinada de varios favoritos, esas fallas se acumulan (mira la guía de combinadas).</li>
+<li><b>Desconfía de las rachas.</b> Acertar cinco seguidas con favoritos de 80 % ocurre solo en un tercio de los casos; fallar una no es señal de nada.</li>
+<li><b>El empate no es un resultado raro.</b> En fútbol, es normal que aproximadamente uno de cada cuatro partidos termine empatado y que el favorito no gane.</li>
+</ul>
+<h2>Cada semana lo comprobamos</h2>
+<p>En los <a href="../../informes/" style="text-decoration:underline">informes semanales</a> verás cuántos partidos acertó el modelo esa semana y qué favoritos de más del 75 % fallaron.</p>`;
+    },
+  },
+  {
+    slug: 'como-comparar-casas-de-apuestas-peru', published: '2026-11-19', title: 'Cómo comparar casas de apuestas en Perú: qué mirar además de la cuota',
+    desc: 'Autorización del MINCETUR, margen, límites, retiros y herramientas de control: una lista práctica para comparar casas de apuestas antes de abrir una cuenta.',
+    rel: ['margen-de-la-casa', 'juego-responsable-senales-y-ayuda'],
+    body: () => `
+<p>Dos casas pueden mostrar la misma cuota y ser muy distintas. Antes de depositar dinero, conviene comparar algo más que el número. Esta guía reúne los puntos que revisaríamos nosotros, sin recomendar ninguna casa.</p>
+<h2>1. Que esté autorizada</h2>
+<p>En Perú las apuestas deportivas a distancia están reguladas (Ley 31557 y su reglamento) y el MINCETUR publica el registro de operadores autorizados. Antes de abrir una cuenta:</p>
+<ul>
+<li>Busca el nombre y el <b>dominio exacto</b> de la casa en el registro oficial (apuestasdeportivas.mincetur.gob.pe).</li>
+<li>Desconfía de dominios parecidos al de una casa conocida, de cuentas ofrecidas por redes sociales o de «agentes» que cobran por fuera.</li>
+<li>Las listas de terceros pueden estar desactualizadas: el registro oficial manda.</li>
+</ul>
+<h2>2. El margen real</h2>
+<p>La cuota alta de un partido no dice nada si el resto de mercados tiene márgenes altos. Compara el margen en los mercados que sueles usar (mira la guía del margen de la casa). Una casa con 1,90 en ambos lados de una moneda justa se queda 5,3 %; otra con 1,80 se queda 11,1 %.</p>
+<h2>3. Depósitos y retiros</h2>
+<ul>
+<li>Qué métodos acepta, cuánto cobra y cuánto demora en acreditar.</li>
+<li>Cuánto tarda el <b>retiro</b> y qué documentos pide (identidad, cuenta a tu nombre).</li>
+<li>Si exige apostar varias veces un bono antes de dejarte retirar.</li>
+</ul>
+<h2>4. Bonos: lee la letra pequeña</h2>
+<p>Un bono de bienvenida casi nunca es gratis: suele exigir apostar varias veces el monto con cuotas mínimas y plazos. Pregúntate cuánto tendrías que apostar para retirar. Un bono puede empujarte a jugar más de lo previsto.</p>
+<h2>5. Límites y herramientas de control</h2>
+<ul>
+<li>Límites de depósito, de pérdida y de tiempo que puedas fijar tú.</li>
+<li>Autoexclusión temporal o permanente, fácil de activar.</li>
+<li>Avisos de juego responsable visibles y un historial claro de tus movimientos.</li>
+</ul>
+<h2>6. Atención al cliente y reclamos</h2>
+<p>Revisa si hay atención en español, horarios y vías de reclamo. Guarda capturas de tus apuestas y de los términos aceptados. Si una casa autorizada no resuelve un reclamo, puedes acudir a las autoridades competentes, como el MINCETUR.</p>
+<h2>7. Mercados que realmente usas</h2>
+<p>Si solo apuestas a la Liga 1 o a la Champions, importa más la cobertura de esos mercados que el catálogo total. Comprueba si ofrece las líneas que te interesan (1X2, goles, hándicap).</p>
+<h2>Una lista corta antes de abrir cuenta</h2>
+<ol>
+<li>¿Está en el registro del MINCETUR, con el dominio exacto?</li>
+<li>¿Entiendo cómo y cuándo puedo retirar?</li>
+<li>¿Puedo poner límites y autoexcluirme?</li>
+<li>¿El margen de sus mercados es razonable?</li>
+<li>¿Entiendo las condiciones de cualquier bono?</li>
+</ol>
+<p>Aurum Predictor no tiene afiliación con ninguna casa ni cobra por aparecer. Si apuestas, hazlo solo con dinero que puedas permitirte perder y si eres mayor de 18 años.</p>`,
+  },
+  {
+    slug: 'como-usar-aurum-predictor-paso-a-paso', published: '2026-11-26', title: 'Cómo usar Aurum Predictor paso a paso: de la probabilidad a la cuota justa',
+    desc: 'Recorrido por las pestañas del sitio: pronósticos, goles, combinada del día, mis cuotas y backtest. Aprende a leer cada dato y a no sacar conclusiones de más.',
+    rel: ['que-es-la-cuota-justa', 'combinadas-como-se-multiplica-el-riesgo'],
+    body: () => `
+<p>Aurum Predictor no te dice «apuesta aquí». Te da probabilidades, cuotas justas y una medición honesta de cuánto ha acertado el modelo. Esta guía explica cómo leer cada parte.</p>
+<h2>1. Pronósticos: la pantalla principal</h2>
+<ul>
+<li>Usa las listas desplegables de <b>Deporte</b>, <b>Liga</b> y <b>Cuándo</b> para acotar. «Por probabilidad» pone arriba los partidos con favorito más claro.</li>
+<li>En cada tarjeta ves el resultado más probable, su porcentaje y una etiqueta: «favorito claro», «ventaja moderada» o «pareja / poco fiable».</li>
+<li>Si aparece «cuota muy baja: casi no compensa», el favorito es tan probable que su cuota justa es menor de 1,20.</li>
+<li>La línea «Goles» muestra el mercado de goles más probable de ese partido (fútbol).</li>
+</ul>
+<h2>2. El detalle de un partido</h2>
+<p>Toca un partido para abrir la ventana con el detalle: probabilidades de cada resultado (mercado y modelo), goles esperados, la tabla de goles con más/menos de 1.5, 2.5 y 3.5 y ambos marcan, últimos resultados de cada equipo y, si hay datos, cuotas de varias casas.</p>
+<h2>3. La cuota justa</h2>
+<p>La <b>cuota justa</b> es 1 ÷ probabilidad. Es el mínimo que una casa debería pagar para que la jugada compense. Si tu casa paga menos, no conviene; si paga más, la ventaja es solo una estimación. Más en la <a href="../que-es-la-cuota-justa/" style="text-decoration:underline">guía de la cuota justa</a>.</p>
+<h2>4. Mis cuotas: compara con tu casa</h2>
+<p>Las casas peruanas no ofrecen datos abiertos. En el detalle del partido, o en la pestaña «Mis cuotas», puedes escribir la cuota que ves en tu casa. El sitio la compara con la cuota justa y calcula el valor esperado (EV). Se guarda solo en tu navegador.</p>
+<h2>5. La combinada probable del día</h2>
+<p>Arriba de la pantalla principal verás la combinada de goles más probable del día, con la probabilidad conjunta, el riesgo y la cuota justa. Puedes elegir entre 2 y 5 selecciones. Recuerda que las probabilidades se multiplican: mira la <a href="../combinadas-como-se-multiplica-el-riesgo/" style="text-decoration:underline">guía de combinadas</a>.</p>
+<h2>6. Valor, Partidos y Combinadas</h2>
+<ul>
+<li><b>Valor:</b> selecciones donde la cuota de una casa supera la cuota justa del modelo o del mercado.</li>
+<li><b>Partidos:</b> la cuota más alta de cada resultado entre las casas disponibles.</li>
+<li><b>Combinadas:</b> combinaciones de 2 o 3 selecciones, siempre de una sola casa y nunca del mismo partido.</li>
+</ul>
+<p>Estas pantallas dependen de que haya cuotas de casas; en semanas con pocos partidos pueden aparecer vacías.</p>
+<h2>7. Modelo y backtest: cuánto ha acertado</h2>
+<p>La pestaña «Modelo y backtest» explica el método y muestra el acierto por liga y deporte en una prueba sin mirar el futuro. Si el modelo acierta poco en una liga, el sitio lo muestra tal cual. Complementa con la <a href="../../metodologia/" style="text-decoration:underline">metodología</a> y los <a href="../../informes/" style="text-decoration:underline">informes semanales</a>.</p>
+<h2>8. Lo que no debes concluir</h2>
+<ul>
+<li>Una probabilidad alta no es una promesa.</li>
+<li>Un valor esperado positivo es una estimación, no una ganancia asegurada.</li>
+<li>Un modelo que acierta bien no implica que supere a las casas.</li>
+<li>Ninguna herramienta evita las pérdidas: el juego es solo para mayores de 18 años, con dinero que puedas perder.</li>
+</ul>`,
+  },
 ];
 
 const guiaBySlug = Object.fromEntries(GUIAS.map((g) => [g.slug, g]));
@@ -330,4 +483,4 @@ function metodologia(st) {
 <p>Este sitio es solo informativo. <b>No acepta apuestas, no mueve dinero y no es una recomendación.</b></p>`;
 }
 
-module.exports = { GUIAS, guiaBySlug, acerca, contacto, metodologia, UPDATED, REPO_ISSUES };
+module.exports = { dmy, GUIAS, guiaBySlug, acerca, contacto, metodologia, UPDATED, REPO_ISSUES };

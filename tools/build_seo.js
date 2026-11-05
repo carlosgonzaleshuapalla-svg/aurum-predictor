@@ -101,7 +101,7 @@ function shell(opts) {
     '  <main><div class="wrap pg legal-page seo-page">\n' + opts.body + '\n  </div></main>\n' +
     '  <footer class="foot"><div class="wrap"><p class="legal"><b>Aviso:</b> Aurum Predictor es una herramienta de análisis estadístico. <b>No acepta apuestas, no mueve dinero y no garantiza resultados.</b> Las probabilidades son estimaciones de un modelo y pueden estar equivocadas; las casas incluyen un margen y la mayoría de apostadores pierde a largo plazo. Datos de terceros (ESPN y football-data.co.uk), sin afiliación ni garantía. ' +
     '<a href="' + up + 'pronosticos-hoy/" style="text-decoration:underline">Pronósticos de hoy</a> · <a href="' + up + 'pronosticos-manana/" style="text-decoration:underline">de mañana</a> · <a href="' + up + 'ligas/" style="text-decoration:underline">Ligas</a> · '+
-    '<a href="' + up + 'guias/" style="text-decoration:underline">Guías</a> · <a href="' + up + 'metodologia/" style="text-decoration:underline">Metodología</a> · <a href="' + up + 'acerca/" style="text-decoration:underline">Acerca de</a> · <a href="' + up + 'contacto/" style="text-decoration:underline">Contacto</a> · ' +
+    '<a href="' + up + 'guias/" style="text-decoration:underline">Guías</a> · <a href="' + up + 'informes/" style="text-decoration:underline">Informes</a> · <a href="' + up + 'metodologia/" style="text-decoration:underline">Metodología</a> · <a href="' + up + 'acerca/" style="text-decoration:underline">Acerca de</a> · <a href="' + up + 'contacto/" style="text-decoration:underline">Contacto</a> · ' +
     '<a href="' + up + 'privacidad.html" style="text-decoration:underline">Privacidad y cookies</a> · <a href="#" id="cookie-settings" hidden style="text-decoration:underline">Cookies</a></p></div></footer>\n' +
     '  <script src="' + up + opts.adsJs + '"></script>\n</body>\n</html>\n';
 }
@@ -233,6 +233,7 @@ function indexPage(groups, slugs, head, M) {
 }
 
 // guías, metodología, acerca de y contacto (textos en tools/contenido.js); las cifras salen de los datos publicados
+const pcs = (x) => (x * 100).toFixed(0).replace('.', ',') + ' %';
 function contentStats(M, BTM) {
   const by = {}; Object.keys(BTM).forEach((k) => { const b = BTM[k]; if (k[0] === '_' || !b || !(b.n >= 20)) return; const sp = b.sport || k.split('/')[0]; const o = (by[sp] = by[sp] || { n: 0, hit: 0, base: 0 }); o.n += b.n; o.hit += b.acc * b.n; o.base += (b.baseAcc || 0) * b.n; });
   const sports = SPORT_ORDER.filter((s) => by[s]).map((s) => ({ name: SPORT_NAME[s] || s, n: by[s].n, acc: by[s].hit / by[s].n, base: by[s].base / by[s].n }));
@@ -246,16 +247,29 @@ function contentPages(dist, M, BTM, head) {
     ['acerca', 'Acerca de Aurum Predictor', 'Qué es Aurum Predictor, qué hace y qué no hace, de dónde salen los datos y cuáles son sus principios.', C.acerca(), 'Acerca de'],
     ['contacto', 'Contacto | Aurum Predictor', 'Cómo reportar un error o proponer una mejora en Aurum Predictor.', C.contacto(), 'Contacto']];
   for (const [slug, title, desc, body, crumb] of info) write(slug, shell({ title, desc, canonical: SITE + '/' + slug + '/', depth: 1, ...head, crumbs: [['Inicio', SITE + '/'], [crumb, SITE + '/' + slug + '/']], body }));
-  for (const g of C.GUIAS) {
-    const rel = (g.rel || []).map((r) => C.guiaBySlug[r]).filter(Boolean);
-    const body = '<p class="muted"><a href="../">Guías</a> · actualizado ' + esc(C.UPDATED) + '</p>\n<h1>' + esc(g.title) + '</h1>\n' + g.body(st) +
+  const todayL = limaYMD(new Date().toISOString()), GUIAS = C.GUIAS.filter((g) => !g.published || g.published <= todayL); // «published» programa la salida de cada guía
+  for (const g of GUIAS) {
+    const rel = (g.rel || []).map((r) => C.guiaBySlug[r]).filter((r) => r && GUIAS.includes(r));
+    const body = '<p class="muted"><a href="../">Guías</a> · ' + (g.published ? 'publicado el ' + esc(C.dmy(g.published)) : 'actualizado ' + esc(C.UPDATED)) + '</p>\n<h1>' + esc(g.title) + '</h1>\n' + g.body(st) +
       (rel.length ? '\n<h2>Sigue leyendo</h2>\n<ul>' + rel.map((r) => '<li><a href="../' + r.slug + '/" style="text-decoration:underline">' + esc(r.title) + '</a></li>').join('') + '</ul>' : '') +
       '\n<p class="hint">Contenido informativo, no es una recomendación de apuestas. Las apuestas son solo para mayores de 18 años; el juego en exceso puede causar ludopatía.</p>\n<p><a href="../../" style="text-decoration:underline">Abrir el comparador completo →</a></p>\n';
     write('guias/' + g.slug, shell({ title: g.title + ' | Aurum Predictor', desc: g.desc.slice(0, 158), canonical: SITE + '/guias/' + g.slug + '/', depth: 2, ...head, crumbs: [['Inicio', SITE + '/'], ['Guías', SITE + '/guias/'], [g.title, SITE + '/guias/' + g.slug + '/']], body }));
   }
   const list = '<h1>Guías para entender cuotas, probabilidades y goles</h1>\n<p>Textos escritos para que entiendas lo que ves en el sitio y tomes decisiones con la cabeza fría. Ninguno promete ganancias.</p>\n<ul>' +
-    C.GUIAS.map((g) => '<li><a href="' + g.slug + '/" style="text-decoration:underline"><b>' + esc(g.title) + '</b></a><br><span class="muted">' + esc(g.desc) + '</span></li>').join('') + '</ul>\n<p>También: <a href="../metodologia/" style="text-decoration:underline">Metodología</a> · <a href="../acerca/" style="text-decoration:underline">Acerca de</a> · <a href="../contacto/" style="text-decoration:underline">Contacto</a></p>\n';
+    GUIAS.map((g) => '<li><a href="' + g.slug + '/" style="text-decoration:underline"><b>' + esc(g.title) + '</b></a><br><span class="muted">' + esc(g.desc) + '</span></li>').join('') + '</ul>\n<p>También: <a href="../metodologia/" style="text-decoration:underline">Metodología</a> · <a href="../acerca/" style="text-decoration:underline">Acerca de</a> · <a href="../contacto/" style="text-decoration:underline">Contacto</a></p>\n';
   write('guias', shell({ title: 'Guías de cuotas, probabilidades y goles | Aurum Predictor', desc: 'Guías para entender la cuota justa, el margen de la casa, las combinadas, los mercados de goles y el juego responsable.', canonical: SITE + '/guias/', depth: 1, ...head, crumbs: [['Inicio', SITE + '/'], ['Guías', SITE + '/guias/']], body: list }));
+  // informes semanales (tools/informes.js): una página por semana completa, con los resultados reales
+  const I = require('./informes.js'), today = limaYMD(new Date().toISOString());
+  let reps = [];
+  try { reps = I.computeWeeks(M, BTM, today, 8); } catch (e) { console.log('Aviso: no se pudo calcular el informe semanal (' + e.message + ')'); }
+  if (reps.length) {
+    reps.forEach((r, k) => write('informes/' + r.start, shell({ title: 'Informe semanal del modelo: ' + I.rangeText(r.start) + ' | Aurum Predictor',
+      desc: ('Informe de la semana ' + I.rangeText(r.start) + ': ' + r.total + ' partidos pronosticados, acierto del ' + pcs(r.hit / r.total) + ', goles, ligas y favoritos que fallaron.').slice(0, 158),
+      canonical: SITE + '/informes/' + r.start + '/', depth: 2, ...head, crumbs: [['Inicio', SITE + '/'], ['Informes', SITE + '/informes/'], [I.rangeText(r.start), SITE + '/informes/' + r.start + '/']],
+      body: I.renderWeek(r, st, { prev: reps[k + 1], next: reps[k - 1] }) })));
+    write('informes', shell({ title: 'Informes semanales del modelo | Aurum Predictor', desc: 'Cada semana: cuántos partidos acertó el modelo, cómo salieron los goles y qué favoritos fallaron, con resultados reales.', canonical: SITE + '/informes/', depth: 1, ...head,
+      crumbs: [['Inicio', SITE + '/'], ['Informes', SITE + '/informes/']], body: I.renderIndex(reps) }));
+  }
   return out;
 }
 
@@ -286,7 +300,7 @@ function build(dist) {
   leagues.forEach((l) => (l._next = nextBy[l.id] || 0));
 
   const outDir = path.join(dist, 'ligas'), mDir = path.join(dist, 'partidos');
-  for (const d of [outDir, mDir, path.join(dist, 'pronosticos-hoy'), path.join(dist, 'pronosticos-manana'), path.join(dist, 'guias'), path.join(dist, 'metodologia'), path.join(dist, 'acerca'), path.join(dist, 'contacto')]) fs.rmSync(d, { recursive: true, force: true });
+  for (const d of [outDir, mDir, path.join(dist, 'pronosticos-hoy'), path.join(dist, 'pronosticos-manana'), path.join(dist, 'guias'), path.join(dist, 'metodologia'), path.join(dist, 'acerca'), path.join(dist, 'contacto'), path.join(dist, 'informes')]) fs.rmSync(d, { recursive: true, force: true });
   const lgOk = new Set(leagues.map((l) => l.id)), lgById = {}; leagues.forEach((l) => (lgById[l.id] = l));
   const fcMap = {}, matchUrl = {}, items = [], usedUrl = new Set();
   const resBy = {}; M.results.forEach((r) => { if (lgOk.has(r.lg)) (resBy[r.lg] = resBy[r.lg] || []).push(r); });

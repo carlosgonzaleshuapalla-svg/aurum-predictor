@@ -72,6 +72,8 @@ ok(metod.includes('Metodología') && metod.includes('Acierto del modelo') && !me
 ok(fs.readFileSync(path.join(dist, 'contacto', 'index.html'), 'utf8').includes('github.com') && fs.readFileSync(path.join(dist, 'acerca', 'index.html'), 'utf8').includes('No aceptamos apuestas'), 'contacto y acerca de existen');
 ok(sm.includes('/guias/' + gslugs[0] + '/') && sm.includes('/metodologia/') && sm.includes('/acerca/') && sm.includes('/contacto/'), 'el sitemap incluye guías, metodología, acerca y contacto');
 ok(!/\b(undefined|NaN)\b/.test(gslugs.map((d) => fs.readFileSync(path.join(gdir, d, 'index.html'), 'utf8')).join('')), 'guías sin undefined ni NaN');
+const CT = require('../tools/contenido.js'), todayLima = new Date().toLocaleDateString('en-CA', { timeZone: 'America/Lima' });
+ok(CT.GUIAS.every((g) => (!g.published || g.published <= todayLima) === gslugs.includes(g.slug)), 'guías programadas: solo salen las que ya cumplieron su fecha de publicación');
 const mdFut = fs.readdirSync(path.join(dist, 'partidos')).map((d) => fs.readFileSync(path.join(dist, 'partidos', d, 'index.html'), 'utf8'));
 ok(!hy.includes('<script>') && (hy.includes('Combinada probable de goles') || !fs.readFileSync(path.join(dist, 'pronosticos-manana', 'index.html'), 'utf8').includes('<script>')), 'día: la combinada de goles aparece sin inyectar HTML');
 let threw = false; try { S.build(path.join(dist, 'nada')); } catch (e) { threw = true; }
