@@ -3,6 +3,9 @@
   'use strict';
   const SPORT_NAME = { soccer: 'Fútbol', basketball: 'Baloncesto', baseball: 'Béisbol', football: 'Fútbol americano', hockey: 'Hockey', mma: 'MMA / UFC', tennis: 'Tenis', rugby: 'Rugby', volleyball: 'Vóley', cricket: 'Críquet' };
   const SPORT_ORDER = ['soccer', 'basketball', 'baseball', 'football', 'hockey', 'mma', 'tennis'];
+  // color e icono por deporte: ayudan a separar de un vistazo las secciones y tarjetas
+  const SPC = { soccer: ['#2e8b57', '⚽'], basketball: ['#e8742c', '🏀'], baseball: ['#c4432f', '⚾'], football: ['#8a5a2b', '🏈'], hockey: ['#3a7bd5', '🏒'], mma: ['#7a3b8f', '🥊'], tennis: ['#9aa51f', '🎾'], rugby: ['#2a8f8f', '🏉'], volleyball: ['#d4a017', '🏐'], cricket: ['#5b7ba6', '🏏'] };
+  const spc = (s) => SPC[s] || ['#7a7566', '🏅'];
   const CONF = { alta: 'Favorito claro', media: 'Ventaja moderada', baja: 'Pareja / poco fiable' };
 
   // multi.js viene empaquetado (tablas de ligas/equipos + listas); se expande aquí a objetos
@@ -167,7 +170,7 @@
         if (!f) return h('div', { class: 'evcard', role: 'button', tabindex: '0', onkeydown: openKey, onclick: () => detail(e) }, head, h('div', { class: 'muted', style: 'font-size:13px' }, 'Sin pronóstico: no hay cuotas ni histórico suficiente'));
         const pk = f.pick, bt = BTM[e.lg], cls = pk.conf === 'alta' ? 'val' : pk.conf === 'baja' ? 'warn' : '';
         const bars = f.labels.map((l, i) => h('div', { style: 'flex:1;min-width:90px' }, h('div', { class: 'kv' }, h('span', {}, l.length > 18 ? l.slice(0, 17) + '…' : l), h('b', {}, pct(f.p[i], 0))), h('div', { class: 'pbar' }, h('i', { style: 'width:' + (f.p[i] * 100).toFixed(1) + '%;background:' + (i === pk.i ? 'var(--copper)' : 'var(--steel)') }))));
-        return h('div', { class: 'evcard pick', role: 'button', tabindex: '0', 'aria-label': e.h + ' contra ' + e.a + ': ' + pk.label + ' ' + pct(pk.p, 0), onkeydown: openKey, onclick: () => detail(e) }, head,
+        return h('div', { class: 'evcard pick', style: '--sc:' + spc(spOf(e))[0], role: 'button', tabindex: '0', 'aria-label': e.h + ' contra ' + e.a + ': ' + pk.label + ' ' + pct(pk.p, 0), onkeydown: openKey, onclick: () => detail(e) }, head,
           h('div', { style: 'text-align:right' }, h('div', { class: 'pickline' }, pk.label), h('div', {}, h('span', { class: 'badge ' + cls }, CONF[pk.conf]), ' ', h('b', {}, pct(pk.p, 0)), pk.fairOdds < 1.2 ? h('div', {}, h('span', { class: 'badge warn' }, 'cuota muy baja: casi no compensa')) : null)),
           h('div', { style: 'grid-column:1/-1' }, verdictBox(pk), h('div', { style: 'display:flex;gap:14px;flex-wrap:wrap;margin-top:10px' }, bars),
             goalsOf(e)[0] ? h('div', { class: 'meta', style: 'margin-top:8px' }, h('span', { class: 'badge' }, 'Goles'), ' ', h('b', {}, goalsOf(e)[0].label + ' · ' + pct(goalsOf(e)[0].p, 0))) : null,
@@ -270,23 +273,34 @@
       let listBox = null, render = () => {};
       function page() {
         prepare();
-        const root_ = h('div', { class: 'wrap pg' }), top = h('div', {}), list = h('div', {}); listBox = list;
+        // la barra de deportes queda fija justo debajo del encabezado, sea cual sea su altura
+        const setHdr = () => { const hd = document.querySelector('header.top'); if (hd) document.documentElement.style.setProperty('--hdr-h', Math.max(0, hd.offsetHeight - 1) + 'px'); };
+        setHdr(); setTimeout(setHdr, 300); if (!root.__aurumHdrBound) { root.__aurumHdrBound = true; window.addEventListener('resize', () => { const hd = document.querySelector('header.top'); if (hd) document.documentElement.style.setProperty('--hdr-h', Math.max(0, hd.offsetHeight - 1) + 'px'); }); }
+        const root_ = h('div', { class: 'wrap pg' }), top = h('div', {}), list = h('div', {}), barBox = h('div', { class: 'sportbar' }); listBox = list;
         const sports = SPORT_ORDER.filter((s) => evs.some((e) => spOf(e) === s)).concat(Array.from(new Set(evs.map(spOf))).filter((s) => !SPORT_ORDER.includes(s)));
         render = () => {
           if (S.sport !== 'all' && !sports.includes(S.sport)) S.sport = 'all';
-          top.replaceChildren(); list.replaceChildren();
+          top.replaceChildren(); list.replaceChildren(); barBox.replaceChildren();
           const inSport = (e) => S.sport === 'all' || spOf(e) === S.sport;
           const lgsOf = Array.from(new Set(evs.filter(inSport).map((e) => e.lg))).sort((a, b) => (isPeru(b) - isPeru(a)) || lgById[a].name.localeCompare(lgById[b].name));
           if (S.mlg !== 'all' && !lgsOf.includes(S.mlg)) S.mlg = 'all';
           const cnt = (s) => evs.filter((e) => s === 'all' || spOf(e) === s).length;
           // listas desplegables en lugar de una fila de botones por cada opción
           const dd = (label, opts, cur, pick) => { const sel = h('select', { class: 'inp', 'aria-label': label, onchange: (ev) => pick(ev.target.value) }, opts.map(([v, t]) => h('option', { value: v }, t))); sel.value = cur; return SL.ui.field(label, sel); };
-          const sportOpts = [['all', 'Todos los deportes · ' + cnt('all')]].concat(sports.map((s) => [s, spName(s) + ' · ' + cnt(s)]));
-          const lgOpts = [['all', 'Todas las ligas · ' + evs.filter(inSport).length]].concat(lgsOf.map((l) => [l, lgById[l].name + ' · ' + evs.filter((e) => e.lg === l).length]));
+          // barra horizontal fija: deportes (y, al elegir uno, sus ligas) a un toque, sin listas desplegables
+          const chip = (icon, label, n, color, on, click) => h('button', { class: 'sp-chip' + (on ? ' on' : ''), type: 'button', style: '--sc:' + color, 'aria-pressed': on ? 'true' : 'false', onclick: click }, icon ? h('span', { class: 'sp-ic', 'aria-hidden': 'true' }, icon) : null, label, h('small', {}, String(n)));
+          const row1 = h('div', { class: 'sp-row', role: 'group', 'aria-label': 'Deporte' }, chip('🌐', 'Todos', cnt('all'), '#261b07', S.sport === 'all', () => { S.sport = 'all'; S.mlg = 'all'; saveUI(); render(); }),
+            sports.map((s) => chip(spc(s)[1], spName(s), cnt(s), spc(s)[0], S.sport === s, () => { S.sport = s; S.mlg = 'all'; saveUI(); render(); })));
+          barBox.append(row1);
+          let row2 = null;
+          if (S.sport !== 'all' && lgsOf.length > 1) {
+            row2 = h('div', { class: 'sp-row sub', role: 'group', 'aria-label': 'Liga' }, chip('', 'Todas', evs.filter(inSport).length, spc(S.sport)[0], S.mlg === 'all', () => { S.mlg = 'all'; saveUI(); render(); }),
+              lgsOf.map((l) => chip('', lgById[l].name, evs.filter((e) => e.lg === l).length, spc(S.sport)[0], S.mlg === l, () => { S.mlg = l; saveUI(); render(); })));
+            barBox.append(row2);
+          }
+          [row1, row2].forEach((r) => { const on = r && r.querySelector('.on'); if (on) r.scrollLeft = Math.max(0, on.offsetLeft - 16); });
           const q = h('input', { class: 'search', type: 'search', placeholder: 'Buscar equipo o peleador', value: S.q || '', oninput: (ev) => { S.q = ev.target.value; list.replaceChildren(); fill(); } });
           top.append(h('div', { class: 'filters' },
-            dd('Deporte', sportOpts, S.sport, (v) => { S.sport = v; S.mlg = 'all'; saveUI(); render(); }),
-            dd('Liga', lgOpts, S.mlg, (v) => { S.mlg = v; saveUI(); render(); }),
             dd('Cuándo', [['today', 'Hoy'], ['48', '48 horas'], ['week', 'Semana']], S.when, (v) => { S.when = v; saveUI(); render(); }),
             dd('Orden', [['time', 'Por hora'], ['conf', 'Por probabilidad']], S.sort, (v) => { S.sort = v; saveUI(); render(); }),
             SL.ui.field('Buscar', q)));
@@ -313,7 +327,7 @@
         }
         root_.append(h('span', { class: 'eyebrow' }, 'Pronósticos'), h('h1', { class: 'serif' }, 'Pronósticos para ', h('em', {}, 'cada evento'), '.'),
           h('p', { class: 'lead' }, 'Elige deporte y liga. Para cada evento verás el resultado más probable, qué tan probable es y la cuota justa. “Más probable” no significa “seguro” ni “buena apuesta”: los favoritos pagan poco.'),
-          comboPanel(), h('div', { class: 'note mt' }, h('b', {}, 'Cómo leerlo. '), hasRefOdds ? 'Las cuotas de referencia son de DraftKings (EE. UU., vía la API pública no oficial de ESPN), que no figura como autorizada en Perú: sirven para estimar la probabilidad del mercado. Para la Liga 1 y otras ligas con pocas cuotas, el pronóstico sale del modelo. Añade la cuota de tu casa para saber si paga más que la cuota justa.' : 'En la mayoría de ligas y deportes el pronóstico sale del modelo estadístico (resultados pasados de cada equipo o competidor); mira abajo, en cada tarjeta, cuánto ha acertado el modelo en esa liga. En 10 ligas europeas de fútbol, además, se comparan las cuotas de varias casas. Añade la cuota de tu casa para saber si paga más que la cuota justa. Un modelo puede equivocarse: los mercados suelen predecir mejor.'), top, list);
+          comboPanel(), h('div', { class: 'note mt' }, h('b', {}, 'Cómo leerlo. '), hasRefOdds ? 'Las cuotas de referencia son de DraftKings (EE. UU., vía la API pública no oficial de ESPN), que no figura como autorizada en Perú: sirven para estimar la probabilidad del mercado. Para la Liga 1 y otras ligas con pocas cuotas, el pronóstico sale del modelo. Añade la cuota de tu casa para saber si paga más que la cuota justa.' : 'En la mayoría de ligas y deportes el pronóstico sale del modelo estadístico (resultados pasados de cada equipo o competidor); mira abajo, en cada tarjeta, cuánto ha acertado el modelo en esa liga. En 10 ligas europeas de fútbol, además, se comparan las cuotas de varias casas. Añade la cuota de tu casa para saber si paga más que la cuota justa. Un modelo puede equivocarse: los mercados suelen predecir mejor.'), barBox, top, list);
         render(); return root_;
       }
 

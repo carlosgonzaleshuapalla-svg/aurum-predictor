@@ -250,7 +250,7 @@ function contentPages(dist, M, BTM, head) {
   const todayL = limaYMD(new Date().toISOString()), GUIAS = C.GUIAS.filter((g) => !g.published || g.published <= todayL); // «published» programa la salida de cada guía
   for (const g of GUIAS) {
     const rel = (g.rel || []).map((r) => C.guiaBySlug[r]).filter((r) => r && GUIAS.includes(r));
-    const body = '<p class="muted"><a href="../">Guías</a> · ' + (g.published ? 'publicado el ' + esc(C.dmy(g.published)) : 'actualizado ' + esc(C.UPDATED)) + '</p>\n<h1>' + esc(g.title) + '</h1>\n' + g.body(st) +
+    const body = '<p class="muted"><a href="../">Guías</a> · ' + (g.published ? 'publicado el ' + esc(C.dmy(g.published)) : 'actualizado ' + esc(C.UPDATED)) + '</p>\n<h1>' + esc(g.title) + '</h1>\n<div class="tldr"><b class="tt">En resumen</b><p>' + esc(g.desc) + '</p></div>\n' + g.body(st) +
       (rel.length ? '\n<h2>Sigue leyendo</h2>\n<ul>' + rel.map((r) => '<li><a href="../' + r.slug + '/" style="text-decoration:underline">' + esc(r.title) + '</a></li>').join('') + '</ul>' : '') +
       '\n<p class="hint">Contenido informativo, no es una recomendación de apuestas. Las apuestas son solo para mayores de 18 años; el juego en exceso puede causar ludopatía.</p>\n<p><a href="../../" style="text-decoration:underline">Abrir el comparador completo →</a></p>\n';
     write('guias/' + g.slug, shell({ title: g.title + ' | Aurum Predictor', desc: g.desc.slice(0, 158), canonical: SITE + '/guias/' + g.slug + '/', depth: 2, ...head, crumbs: [['Inicio', SITE + '/'], ['Guías', SITE + '/guias/'], [g.title, SITE + '/guias/' + g.slug + '/']], body }));

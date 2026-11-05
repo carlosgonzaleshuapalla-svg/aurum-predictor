@@ -222,3 +222,31 @@ nav.main a { white-space: nowrap; padding: 7px 12px; }
 .help-pop { position: fixed; z-index: 9999; background: #261b07; color: #f8f7f5; border-radius: 8px; padding: 10px 12px; font-size: 13px; line-height: 1.45; box-shadow: 0 8px 24px rgba(38,27,7,.25); text-align: left; letter-spacing: 0; text-transform: none; font-weight: 400; }
 .help-pop b { display: block; margin-bottom: 3px; font-weight: 584; }
 .help-pop p { margin: 0; }
+
+/* ---------- Barra horizontal de deportes/ligas (fija arriba) y color por deporte ---------- */
+.sportbar { position: sticky; top: var(--hdr-h, 57px); z-index: 30; margin: 28px -4px 0; padding: 8px 4px 6px; background: rgba(248,247,245,.96); backdrop-filter: blur(10px); border-bottom: 1px solid var(--graphite); }
+.sp-row { display: flex; gap: 8px; overflow-x: auto; scrollbar-width: none; -webkit-overflow-scrolling: touch; padding: 2px 2px 6px; scroll-behavior: smooth; }
+.sp-row::-webkit-scrollbar { display: none; }
+.sp-row.sub { padding-top: 0; }
+.sp-chip { flex: 0 0 auto; display: inline-flex; align-items: center; gap: 6px; padding: 7px 12px; border-radius: 999px; border: 1.5px solid var(--sc, var(--slate)); background: #fff; color: var(--bone); font: 584 13px/1 var(--sans); cursor: pointer; white-space: nowrap; }
+.sp-chip small { font-size: 11px; font-weight: 492; opacity: .65; }
+.sp-chip:hover { background: color-mix(in srgb, var(--sc) 12%, #fff); }
+.sp-chip.on { background: var(--sc); color: #fff; box-shadow: 0 2px 6px color-mix(in srgb, var(--sc) 35%, transparent); }
+.sp-chip.on small { opacity: .85; }
+.sp-row.sub .sp-chip { padding: 5px 10px; font-size: 12px; font-weight: 492; }
+.sp-chip:focus-visible { outline: 2px solid var(--copper); outline-offset: 2px; }
+.sportbar + .filters { margin-top: 14px; }
+.evcard.pick { border-left: 4px solid var(--sc, var(--graphite)); padding-left: 14px; }
+@media (max-width: 600px) { .sportbar { margin-left: -16px; margin-right: -16px; padding-left: 16px; padding-right: 16px; } }
+@media (max-width: 600px) { .evcard.pick { grid-template-columns: 1fr; } }
+
+/* ---------- Resumen corto y secciones plegables (informes y guías) ---------- */
+.tldr { margin: 16px 0 22px; padding: 14px 16px; border-radius: 8px; border-left: 4px solid var(--copper); background: #fdf3d8; color: var(--bone); font-size: 15px; line-height: 1.5; }
+.tldr .tt { display: block; margin-bottom: 4px; font-weight: 584; }
+.tldr p, .tldr ul { margin: 0; } .tldr ul { padding-left: 18px; } .tldr li { margin: 3px 0; }
+details.fold { margin: 14px 0; border: 1px solid var(--graphite); border-radius: 8px; background: #fff; padding: 0 16px; }
+details.fold > summary { cursor: pointer; padding: 12px 0; font-weight: 584; font-size: 17px; list-style: none; display: flex; justify-content: space-between; align-items: center; }
+details.fold > summary::-webkit-details-marker { display: none; }
+details.fold > summary::after { content: '+'; font-size: 22px; line-height: 1; color: var(--copper); }
+details.fold[open] > summary::after { content: '−'; }
+details.fold[open] { padding-bottom: 10px; }

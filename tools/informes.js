@@ -91,6 +91,14 @@ function renderWeek(rep, st, nav) {
   b += '<p>Entre el ' + esc(dm(rep.start)) + ' y el ' + esc(dmy(rep.end)) + ' el modelo de Aurum Predictor volvió a pronosticar <b>' + rep.total + ' partidos</b> de ' + rep.bySport.length + ' deportes usando solo lo que se sabía antes de que empezara la semana, y acertó el resultado más probable en <b>' + rep.hit + '</b> (' + pc(rep.hit / rep.total, 1) + ').';
   if (soccer && hist) b += ' En fútbol acertó ' + pc(soccer.hit / soccer.n, 1) + ' de ' + soccer.n + ' partidos; su promedio histórico en la prueba larga es ' + pc(hist.acc, 1) + '.';
   b += ' Una sola semana es una muestra pequeña: las diferencias de unos puntos son ruido, no una mejora o un empeoramiento real.</p>\n';
+  { // resumen de 3 líneas para leer en 10 segundos
+    const bs = rep.bySport.filter((x) => x.n >= 5).slice().sort((x, y) => y.hit / y.n - x.hit / x.n), g0 = rep.goals;
+    const li = ['<li><b>Resultado:</b> acertó ' + rep.hit + ' de ' + rep.total + ' partidos (' + pc(rep.hit / rep.total, 0) + ').</li>'];
+    if (bs.length >= 2) li.push('<li><b>Mejor y peor deporte:</b> ' + esc(bs[0].name) + ' (' + pc(bs[0].hit / bs[0].n, 0) + ') y ' + esc(bs[bs.length - 1].name) + ' (' + pc(bs[bs.length - 1].hit / bs[bs.length - 1].n, 0) + ').</li>');
+    if (g0.n >= 20) li.push('<li><b>Goles:</b> el mercado más probable se cumplió en ' + pc(g0.hit / g0.n, 0) + ' de los partidos de fútbol.</li>');
+    if (rep.surprises.length) li.push('<li><b>Sorpresas:</b> ' + rep.surprises.length + ' favoritos con 75 % o más fallaron.</li>');
+    b = b.replace('</h1>\n', '</h1>\n<div class="tldr"><b class="tt">En resumen (10 segundos)</b><ul>' + li.slice(0, 4).join('') + '</ul></div>\n');
+  }
   b += '<h2>Acierto por deporte</h2>\n<div class="table-wrap"><table class="tbl"><thead><tr><th>Deporte</th><th class="r">Partidos</th><th class="r">Aciertos</th><th class="r">Acierto</th></tr></thead><tbody>' +
     rep.bySport.map((s) => '<tr><td>' + esc(s.name) + '</td><td class="r">' + s.n + '</td><td class="r">' + s.hit + '</td><td class="r"><b>' + pc(s.hit / s.n, 1) + '</b></td></tr>').join('') + '</tbody></table></div>\n';
   b += '<p class="hint">Pronóstico del resultado más probable (quién gana; en fútbol también el empate). Los partidos en campo neutral y la pretemporada se excluyen.</p>\n';
@@ -103,15 +111,15 @@ function renderWeek(rep, st, nav) {
   }
   if (rep.nLeagues >= 4) {
     const row = (o) => '<tr><td>' + esc(o.name) + '</td><td class="r">' + o.n + '</td><td class="r"><b>' + pc(o.acc, 0) + '</b></td></tr>';
-    b += '<h2>Ligas de fútbol: mejor y peor semana</h2>\n<div class="pgrid2"><div><h3>Mejor acierto</h3><div class="table-wrap"><table class="tbl"><thead><tr><th>Liga</th><th class="r">Partidos</th><th class="r">Acierto</th></tr></thead><tbody>' + rep.top.map(row).join('') + '</tbody></table></div></div>' +
-      '<div><h3>Peor acierto</h3><div class="table-wrap"><table class="tbl"><thead><tr><th>Liga</th><th class="r">Partidos</th><th class="r">Acierto</th></tr></thead><tbody>' + rep.bottom.map(row).join('') + '</tbody></table></div></div></div>\n<p class="hint">Solo ligas con al menos 8 partidos pronosticados esa semana. Con tan pocos partidos, el orden cambia mucho de una semana a otra.</p>\n';
+    b += '<details class="fold"><summary>Ligas de fútbol: mejor y peor semana</summary>\n<div class="pgrid2"><div><h3>Mejor acierto</h3><div class="table-wrap"><table class="tbl"><thead><tr><th>Liga</th><th class="r">Partidos</th><th class="r">Acierto</th></tr></thead><tbody>' + rep.top.map(row).join('') + '</tbody></table></div></div>' +
+      '<div><h3>Peor acierto</h3><div class="table-wrap"><table class="tbl"><thead><tr><th>Liga</th><th class="r">Partidos</th><th class="r">Acierto</th></tr></thead><tbody>' + rep.bottom.map(row).join('') + '</tbody></table></div></div></div>\n<p class="hint">Solo ligas con al menos 8 partidos pronosticados esa semana. Con tan pocos partidos, el orden cambia mucho de una semana a otra.</p></details>\n';
   }
   if (rep.surprises.length) {
-    b += '<h2>Los favoritos que fallaron</h2>\n<p>Pronósticos con probabilidad de 75 % o más que no se cumplieron. Son recordatorio de que un favorito claro también falla:</p>\n<ul>' +
-      rep.surprises.map((x) => '<li>' + esc(x.h) + ' ' + x.hs + '-' + x.as + ' ' + esc(x.a) + ' (' + esc(x.lgName) + ', ' + esc(dm(x.d)) + '): el modelo daba <b>' + esc(x.pickLabel) + '</b> con ' + pc(x.p, 0) + '.</li>').join('') + '</ul>\n';
+    b += '<details class="fold"><summary>Los favoritos que fallaron</summary>\n<p>Pronósticos con probabilidad de 75 % o más que no se cumplieron. Son recordatorio de que un favorito claro también falla:</p>\n<ul>' +
+      rep.surprises.map((x) => '<li>' + esc(x.h) + ' ' + x.hs + '-' + x.as + ' ' + esc(x.a) + ' (' + esc(x.lgName) + ', ' + esc(dm(x.d)) + '): el modelo daba <b>' + esc(x.pickLabel) + '</b> con ' + pc(x.p, 0) + '.</li>').join('') + '</ul></details>\n';
   }
-  if (rep.goleadas.length) b += '<h2>Partidos con más goles</h2>\n<ul>' + rep.goleadas.map((x) => '<li>' + esc(x.h) + ' ' + x.hs + '-' + x.as + ' ' + esc(x.a) + ' (' + esc(x.lgName) + ', ' + esc(dm(x.d)) + '): ' + x.tot + ' goles.</li>').join('') + '</ul>\n';
-  b += '<h2>Cómo se calcula este informe</h2>\n<p>Para cada partido jugado en la semana, el modelo se reajusta con los resultados de su liga anteriores al lunes y pronostica sin conocer el resultado. La probabilidad de goles usa la calibración histórica del modelo (la calibración se calculó con una muestra amplia que incluye estas semanas; el efecto es mínimo, pero no es una prueba estrictamente ciega). No usa cuotas de casas. Detalles en <a href="../../metodologia/" style="text-decoration:underline">Metodología</a>. Esto es información, no una recomendación de apuestas.</p>\n';
+  if (rep.goleadas.length) b += '<details class="fold"><summary>Partidos con más goles</summary>\n<ul>' + rep.goleadas.map((x) => '<li>' + esc(x.h) + ' ' + x.hs + '-' + x.as + ' ' + esc(x.a) + ' (' + esc(x.lgName) + ', ' + esc(dm(x.d)) + '): ' + x.tot + ' goles.</li>').join('') + '</ul></details>\n';
+  b += '<details class="fold"><summary>Cómo se calcula este informe</summary>\n<p>Para cada partido jugado en la semana, el modelo se reajusta con los resultados de su liga anteriores al lunes y pronostica sin conocer el resultado. La probabilidad de goles usa la calibración histórica del modelo (la calibración se calculó con una muestra amplia que incluye estas semanas; el efecto es mínimo, pero no es una prueba estrictamente ciega). No usa cuotas de casas. Detalles en <a href="../../metodologia/" style="text-decoration:underline">Metodología</a>. Esto es información, no una recomendación de apuestas.</p></details>\n';
   if (nav) b += '<p>' + (nav.prev ? '<a href="../' + nav.prev.start + '/" style="text-decoration:underline">← Semana anterior</a>' : '') + (nav.prev && nav.next ? ' · ' : '') + (nav.next ? '<a href="../' + nav.next.start + '/" style="text-decoration:underline">Semana siguiente →</a>' : '') + '</p>\n';
   return b;
 }
