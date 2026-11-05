@@ -280,10 +280,12 @@ footer.foot { margin-top: 160px; border-top: 1px solid var(--graphite); padding:
 .bj-actions { display: grid; grid-template-columns: repeat(3, 1fr); gap: 8px; }
 
 /* ---------- Responsive ---------- */
-@media (max-width: 960px) {
+@media (max-width: 1200px) {
   nav.main { display: none; }
   nav.main.open { display: flex; position: absolute; top: 64px; left: 0; right: 0; flex-direction: column; background: var(--obsidian); padding: 8px 24px 16px; border-bottom: 1px solid var(--graphite); }
   .menu-btn { display: inline-block; margin-left: auto; }
+}
+@media (max-width: 960px) {
   .top-in { gap: 12px; }
   .hero { padding-top: 48px; } .hero-in { grid-template-columns: 1fr; }
   .stats { grid-template-columns: repeat(2, 1fr); }
