@@ -272,7 +272,7 @@
 
       /* ---------- tabla de acierto por liga (para la pestaña Modelo) ---------- */
       function accuracyTable() {
-        const rows = Object.keys(BTM).filter((k) => k !== '_temp' && k !== '_oos' && BTM[k].n >= 20).sort((a, b) => (isPeru(b) - isPeru(a)) || BTM[b].n - BTM[a].n);
+        const rows = Object.keys(BTM).filter((k) => k[0] !== '_' && BTM[k].n >= 20).sort((a, b) => (isPeru(b) - isPeru(a)) || BTM[b].n - BTM[a].n);
         if (!rows.length) return h('p', { class: 'muted' }, 'Ejecuta node tools/backtest_multi.js para calcular los aciertos por liga.');
         return h('div', { class: 'table-wrap' }, h('table', { class: 'tbl' }, h('thead', {}, h('tr', {}, ['Liga', 'Partidos', 'Acierta el pick', 'Referencia', 'Log-loss'].map((c, i) => h('th', { class: i ? 'r' : '' }, c)))),
           h('tbody', {}, rows.map((k) => { const b = BTM[k], l = lgById[k]; return h('tr', {}, h('td', {}, flag(k), (l ? l.name : k), h('small', {}, spName(l ? l.sport : '')), ), h('td', { class: 'r' }, String(b.n)), h('td', { class: 'r' }, h('b', {}, pct(b.acc, 1))), h('td', { class: 'r muted' }, pct(b.baseAcc, 1)), h('td', { class: 'r muted' }, b.logloss.toFixed(3))); }))));
