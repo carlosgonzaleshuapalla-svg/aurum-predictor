@@ -207,3 +207,18 @@ nav.main a { white-space: nowrap; padding: 7px 12px; }
 .combo-pick { font: 584 18px/1.25 var(--sans); letter-spacing: -.011em; }
 .combo-p { font: 584 24px/1 var(--sans); letter-spacing: -.013em; }
 @media (max-width: 600px) { .combo-kpis { grid-template-columns: 1fr; } .combo-t { font-size: 20px; } .combo-big { font-size: 36px; } }
+
+/* ---------- Veredicto con color y ayudas «?» ---------- */
+.verdict { display: flex; flex-direction: column; gap: 2px; padding: 10px 12px; border-radius: 8px; border-left: 4px solid var(--slate); background: var(--carbon); font-size: 13px; line-height: 1.4; color: var(--bone); margin-top: 8px; text-align: left; }
+.verdict b { font-weight: 584; font-size: 14px; display: flex; align-items: center; gap: 6px; }
+.verdict.v-good { background: #e6f4ea; border-left-color: #2e8b57; } .verdict.v-good b { color: #1d6b3f; }
+.verdict.v-fair { background: #fdf3d8; border-left-color: #f9a600; } .verdict.v-fair b { color: #8a5b00; }
+.verdict.v-bad { background: #fde4df; border-left-color: #c4432f; } .verdict.v-bad b { color: #8f2b1a; }
+.verdict.v-none { background: #eef1f6; border-left-color: #5b7ba6; } .verdict.v-none b { color: #34537d; }
+.verdict.big { font-size: 15px; padding: 12px 14px; margin: 10px 0; } .verdict.big b { font-size: 17px; }
+.combo-plain { margin-top: 8px; font-size: 13px; line-height: 1.4; color: var(--bone); }
+.help { display: inline-flex; align-items: center; justify-content: center; width: 18px; height: 18px; padding: 0; margin-left: 2px; border: 1px solid var(--slate); border-radius: 50%; background: #fff; color: var(--bone); font: 600 11px/1 var(--sans); cursor: pointer; vertical-align: middle; }
+.help:hover, .help:focus-visible { background: var(--copper); border-color: var(--copper); outline: none; }
+.help-pop { position: fixed; z-index: 9999; background: #261b07; color: #f8f7f5; border-radius: 8px; padding: 10px 12px; font-size: 13px; line-height: 1.45; box-shadow: 0 8px 24px rgba(38,27,7,.25); text-align: left; letter-spacing: 0; text-transform: none; font-weight: 400; }
+.help-pop b { display: block; margin-bottom: 3px; font-weight: 584; }
+.help-pop p { margin: 0; }
