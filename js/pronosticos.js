@@ -190,15 +190,14 @@
           body.append(h('p', { class: 'muted', style: 'font-size:13px' }, lgById[e.lg].name + ' · ' + limaStr(e) + ' hora de Lima'));
           if (!ff) { body.append(h('div', { class: 'note' }, 'Sin pronóstico: no hay cuotas ni histórico suficiente de estos equipos en la fuente.')); }
           else {
-            const pk = ff.pick;
+            const pk = ff.pick, gp = goalsOf(e);
             body.append(h('div', { class: 'panel' }, h('div', { class: 'eyebrow' }, 'Pronóstico'), h('div', { class: 'pickline', style: 'font-size:28px;margin:6px 0' }, pk.label + ' · ' + pct(pk.p)),
               h('p', { class: 'muted', style: 'font-size:14px' }, 'Es el resultado más probable según ' + ff.source + ', no un resultado seguro: con una probabilidad así, el pick falla en promedio unas ' + Math.round((1 - pk.p) * 100) + ' de cada 100 veces. Cuota justa: ' + od(pk.fairOdds) + '. Si tu casa paga menos que eso, no compensa; si paga más, la ventaja es solo una estimación (y el pick más probable suele tener cuotas bajas).')));
             body.append(h('div', { class: 'table-wrap' }, h('table', { class: 'tbl' }, h('thead', {}, h('tr', {}, ['Resultado', 'Final', 'Mercado', 'Modelo'].map((c, i) => h('th', { class: i ? 'r' : '' }, c)))),
               h('tbody', {}, ff.labels.map((l, i) => h('tr', {}, h('td', {}, l), h('td', { class: 'r' }, pct(ff.p[i])), h('td', { class: 'r' }, ff.market ? pct(ff.market[i]) : '—'), h('td', { class: 'r' }, ff.model ? pct(ff.model[i]) : '—')))))));
             if (ff.info.altDiff != null) body.append(h('p', { class: 'hint' }, 'Altitud: ' + e.h + ' juega a mayor altura que ' + e.a + ' (≈' + ff.info.altDiff.toFixed(1) + ' km de diferencia). El modelo lo tiene en cuenta: en la Liga 1 los equipos de altura marcan más y los visitantes de llanura rinden menos.'));
-            if (ff.info.lh != null) body.append(h('p', { class: 'muted', style: 'font-size:13px' }, 'Goles esperados ' + e.h + ' ' + ff.info.lh.toFixed(2) + ' · ' + e.a + ' ' + ff.info.la.toFixed(2) + ' · Más de 2.5 goles ' + pct(ff.info.ou25[0], 0) + ' · Ambos marcan ' + pct(ff.info.btts[0], 0)));
+            if (ff.info.lh != null) body.append(h('p', { class: 'muted', style: 'font-size:13px' }, 'Goles esperados ' + e.h + ' ' + ff.info.lh.toFixed(2) + ' · ' + e.a + ' ' + ff.info.la.toFixed(2) + ' · Más de 2.5 goles ' + pct((gp.find((g) => g.k === 'o25') || { p: ff.info.ou25[0] }).p, 0) + ' · Ambos marcan ' + pct((gp.find((g) => g.k === 'bs') || { p: ff.info.btts[0] }).p, 0)));
             else if (ff.info.rH != null) body.append(h('p', { class: 'muted', style: 'font-size:13px' }, 'Elo ' + e.h + ' ' + Math.round(ff.info.rH) + ' (' + ff.info.nH + ' partidos) · ' + e.a + ' ' + Math.round(ff.info.rA) + ' (' + ff.info.nA + ' partidos)'));
-            const gp = goalsOf(e);
             if (gp.length) body.append(h('div', {}, h('div', { class: 'eyebrow dim' }, 'Goles'), h('div', { class: 'table-wrap' }, h('table', { class: 'tbl' }, h('thead', {}, h('tr', {}, ['Mercado', 'Probabilidad', 'Cuota justa'].map((c, i) => h('th', { class: i ? 'r' : '' }, c)))),
               h('tbody', {}, gp.map((g) => h('tr', {}, h('td', {}, g.label), h('td', { class: 'r' }, h('b', {}, pct(g.p, 0))), h('td', { class: 'r muted' }, od(1 / g.p))))))), h('p', { class: 'hint' }, 'Probabilidades del modelo de goles (Poisson), recalibradas con su histórico. Una línea «fácil» como más de 1.5 es probable pero paga poco.')));
             body.append(oddsComparison(e, ff, draw));

@@ -89,7 +89,7 @@ function shell(opts) {
   return '<!doctype html>\n<html lang="es">\n<head>\n  <meta charset="utf-8">\n  <meta name="viewport" content="width=device-width, initial-scale=1">\n' +
     '  ' + opts.headBits.join('\n  ') + '\n' +
     '  <title>' + esc(opts.title) + '</title>\n  <meta name="description" content="' + esc(opts.desc) + '">\n' +
-    '  <link rel="canonical" href="' + esc(opts.canonical) + '">\n  <meta name="robots" content="index,follow,max-image-preview:large">\n  <meta name="theme-color" content="#08080a">\n' +
+    '  <link rel="canonical" href="' + esc(opts.canonical) + '">\n  <meta name="robots" content="index,follow,max-image-preview:large">\n  <meta name="theme-color" content="#f8f7f5">\n' +
     '  <meta property="og:type" content="website"><meta property="og:locale" content="es_PE"><meta property="og:site_name" content="Aurum Predictor">\n' +
     '  <meta property="og:title" content="' + esc(opts.title) + '"><meta property="og:description" content="' + esc(opts.desc) + '"><meta property="og:url" content="' + esc(opts.canonical) + '">\n' +
     '  <link rel="stylesheet" href="' + up + opts.css[0] + '">\n  <link rel="stylesheet" href="' + up + opts.css[1] + '">\n' +

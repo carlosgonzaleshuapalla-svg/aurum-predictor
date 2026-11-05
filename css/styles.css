@@ -1,17 +1,19 @@
-/* Aurum · sistema "Swap" (DESIGN-3): lienzo menta, serif fina arriba (Cormorant Garamond ≥28px), Inter debajo, píldoras lima, tarjetas blancas de 24px con sombra suave.
-   Los nombres de variable vienen del tema oscuro anterior; ahora significan: obsidian = lienzo, onyx/carbon = superficies, graphite/slate = bordes, white = tinta fuerte. */
-@import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&family=Cormorant+Garamond:wght@300;400;500;600&display=swap');
+/* Aurum · sistema "Runway" (DESIGN-4): papel crema, tinta espresso y un solo acento ámbar; sombras marrones cálidas, radios de 8 px, Inter con pesos 400/492/584.
+   Los nombres de variable vienen del tema oscuro original; ahora significan: obsidian = lienzo crema, onyx = papel blanco, carbon = superficie sutil, graphite/slate = bordes de lino,
+   white/bone = tinta espresso, copper = ámbar (solo relleno), fog/mist/silver = texto secundario. */
+@import url('https://fonts.googleapis.com/css2?family=Inter:wght@100..900&display=swap');
 
 :root {
-  --obsidian: #f2ffe3; --onyx: #ffffff; --carbon: #ebf7da; --graphite: #d3dcc8; --slate: #b4bfa9; --smoke: #9cb0a8;
-  --ash: #6f7a6c; --steel: #838676; --fog: #4d5859; --mist: #3a4546; --silver: #2d3637; --bone: #000000; --white: #000000;
-  --copper: #0d5b3b; --amber: #8a4f12; --sage: #11704a; --rose: #b3343f;
-  --lime: #a3fda7; --lime-grad: linear-gradient(90deg, rgb(130,255,135), rgb(163,253,167) 50%, rgb(222,255,130));
-  --forest: #0d5b3b; --pine: #083a26; --shadow: 0 0 28px rgba(0,0,0,.09);
-  --gild: linear-gradient(90deg, rgb(130,255,135), rgb(222,255,130));
-  --serif: 'Cormorant Garamond', 'Playfair Display', 'Libre Caslon Display', Georgia, serif;
+  --obsidian: #f8f7f5; --onyx: #ffffff; --carbon: #f1efea; --graphite: #e3dfd5; --slate: #d5d2cd; --smoke: #aca89f;
+  --ash: #8f897e; --steel: #aca89f; --fog: #61594a; --mist: #61594a; --silver: #61594a; --bone: #261b07; --white: #261b07;
+  --copper: #f9a600; --amber: #8a5a00; --sage: #261b07; --rose: #c4432f;
+  --amber-signal: #f9a600; --gold: #e89b01; --terracotta: #f0624f; --wisteria: #d5befa; --honey: #f8da9d;
+  --shadow: 0 4px 8px rgba(38,27,7,.06);
+  --btn-shadow: inset 0 2px 4px rgba(255,255,255,.56), 0 4px 8px rgba(38,27,7,.06), 0 1px 2px rgba(38,27,7,.36);
+  --serif: 'Inter', ui-sans-serif, system-ui, -apple-system, 'Segoe UI', Roboto, sans-serif;
   --sans: 'Inter', ui-sans-serif, system-ui, -apple-system, 'Segoe UI', Roboto, sans-serif;
-  --max: 1200px; --r-card: 24px; --r-pill: 9999px;
+  --max: 1200px; --r-card: 8px; --r-pill: 8px;
+  --gild: #f9a600; --lime: #f9a600; --lime-grad: linear-gradient(90deg, #f9a600, #f8da9d); --forest: #261b07; --pine: #261b07;
 }
 * { box-sizing: border-box; margin: 0; }
 html { scroll-behavior: smooth; }
@@ -46,7 +48,7 @@ button.pill:hover { border-color: var(--white); }
 .tag.ok { border-color: rgba(143,181,154,.5); color: var(--sage); }
 
 /* ---------- Cabecera ---------- */
-header.top { position: sticky; top: 0; z-index: 40; background: rgba(242,255,227,.88); backdrop-filter: blur(14px); border-bottom: 1px solid var(--graphite); }
+header.top { position: sticky; top: 0; z-index: 40; background: rgba(248,247,245,.92); backdrop-filter: blur(14px); border-bottom: 1px solid var(--graphite); }
 .top-in { max-width: var(--max); margin: 0 auto; padding: 0 24px; height: 64px; display: flex; align-items: center; gap: 28px; }
 .logo { font: 400 26px/1 var(--serif); letter-spacing: .02em; display: flex; align-items: center; gap: 8px; }
 .logo i { width: 9px; height: 9px; border-radius: 50%; background: var(--gild); display: inline-block; }
