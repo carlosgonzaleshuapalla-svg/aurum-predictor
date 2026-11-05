@@ -124,7 +124,8 @@
           if (ev >= -0.02) return { cls: 'v-fair', title: 'Cuota justa', text: 'Tu cuota (' + mine + ') es casi igual a la justa (' + fair + '): ni ventaja ni desventaja.' + low };
           return { cls: 'v-bad', title: 'No compensa', text: 'Tu cuota (' + mine + ') paga menos que la justa (' + fair + '). Con ese precio lo más probable es perder dinero a largo plazo.' + low };
         }
-        return { cls: 'v-none', title: 'Falta tu cuota', text: 'Solo compensa si tu casa paga más de ' + fair + '. Añade su cuota y te digo si conviene.' + low };
+        const ref = pk.ref ? ' En el mercado de referencia (' + pk.ref.book + ', no apostable en Perú) la cuota es ' + od(pk.ref.odds) + '.' : '';
+        return { cls: 'v-none', title: 'Falta tu cuota', text: 'Solo compensa si tu casa paga más de ' + fair + '.' + ref + ' Toca para añadir la cuota de tu casa y ver si conviene.' + low };
       }
       const verdictBox = (pk, big) => { const v = verdict(pk); return h('div', { class: 'verdict ' + v.cls + (big ? ' big' : '') }, h('b', {}, v.title, ' ', help('justa')), h('span', {}, v.text)); };
 

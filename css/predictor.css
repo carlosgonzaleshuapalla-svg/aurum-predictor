@@ -250,3 +250,5 @@ details.fold > summary::-webkit-details-marker { display: none; }
 details.fold > summary::after { content: '+'; font-size: 22px; line-height: 1; color: var(--copper); }
 details.fold[open] > summary::after { content: '−'; }
 details.fold[open] { padding-bottom: 10px; }
+.empty-state { margin: 24px 0; text-align: left; border-left: 4px solid var(--copper); }
+.empty-state h3 { margin-bottom: 8px; } .empty-state p { margin: 0 0 12px; line-height: 1.5; }

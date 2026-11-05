@@ -94,11 +94,20 @@
   }
 
   /* ---------- Página: Valor ---------- */
+  // estado vacío útil: estas pantallas dependen de cuotas de varias casas, que se publican pocos días antes de cada jornada
+  const emptyState = (what) => {
+    const M_ = window.AURUM_MULTI, n = M_ && M_.events ? M_.events.filter((e) => e.status === 'pre' && Date.parse(e.ko) > Date.now()).length : 0;
+    return h('div', { class: 'panel empty-state' }, h('h3', {}, 'Aún no hay partidos con cuotas de varias casas'),
+      h('p', {}, 'Esta pantalla ' + what + ' en 10 ligas europeas de fútbol. Las casas publican esas cuotas pocos días antes de cada jornada (normalmente entre jueves y viernes), así que a mitad de semana puede estar vacía. Se actualiza sola cada 8 horas.'),
+      n ? h('p', {}, 'Mientras tanto, la pestaña ', h('b', {}, 'Pronósticos'), ' tiene ' + n + ' eventos de varios deportes con su cuota justa y veredicto.') : null,
+      h('a', { class: 'btn btn-primary', href: '#/pronosticos' }, 'Ver pronósticos disponibles'));
+  };
   function pageHome() {
     const root = h('div', { class: 'wrap pg' });
     const body = h('div', {});
     const draw = () => {
       body.replaceChildren();
+      if (!events.length) { body.append(emptyState('compara las cuotas de varias casas, les quita el margen y marca dónde hay valor')); return; }
       const sel = allSel().filter((s) => (S.lg === 'all' || s.ev_.lg === S.lg) && s.ev * 100 >= S.minEV && s.p * 100 >= S.minP && (!S.onlyModel || s.hasModel)).sort((a, b) => b.ev - a.ev).slice(0, 40);
       body.append(filtersBar(draw));
       body.append(h('div', { class: 'sec-t' }, h('h2', {}, 'Apuestas de valor'), h('span', { class: 'muted' }, sel.length + ' selecciones · ordenadas por valor esperado (EV)')));
@@ -116,7 +125,7 @@
     const nVal = allSel().filter((s) => s.hasModel && s.ev * 100 >= 3).length;
     root.append(h('span', { class: 'eyebrow' }, 'Predictor deportivo'), h('h1', { class: 'serif' }, 'Cuotas, probabilidades y ', h('em', {}, 'valor'), '.'),
       h('p', { class: 'lead' }, 'Compara las cuotas de varias casas, quita su margen, estima la probabilidad real con el histórico de cada equipo y marca dónde el precio parece mejor que el riesgo. No apuesta por ti.'),
-      h('div', { class: 'kpis' }, [[events.length, 'partidos próximos'], [nBooks(), 'casas comparadas'], [Object.keys(fits).filter((k) => fits[k]).length, 'ligas modeladas'], [nVal, 'selecciones con EV ≥ 3 %']].map(([n, l]) => h('div', { class: 'stat' }, h('b', {}, String(n)), h('span', {}, l)))),
+      events.length ? h('div', { class: 'kpis' }, [[events.length, 'partidos próximos'], [nBooks(), 'casas comparadas'], [Object.keys(fits).filter((k) => fits[k]).length, 'ligas modeladas'], [nVal, 'selecciones con EV ≥ 3 %']].map(([n, l]) => h('div', { class: 'stat' }, h('b', {}, String(n)), h('span', {}, l)))) : null,
       evidence(), foreignNote(),
       body);
     draw(); return root;
@@ -126,6 +135,7 @@
   function pagePartidos() {
     const root = h('div', { class: 'wrap pg' }), list = h('div', {});
     const draw = () => {
+      if (!events.length) { list.replaceChildren(emptyState('muestra, partido a partido, la cuota más alta de cada resultado entre todas las casas')); return; }
       list.replaceChildren(filtersBar(draw));
       const evs = events.filter((e) => S.lg === 'all' || e.lg === S.lg);
       let day = '';
@@ -189,6 +199,7 @@
   function pageParlays() {
     const root = h('div', { class: 'wrap pg' }), body = h('div', {});
     const draw = () => {
+      if (!events.length) { body.replaceChildren(emptyState('busca la mejor combinación de 2 o 3 selecciones dentro de una misma casa')); return; }
       body.replaceChildren(filtersBar(draw, { noLeague: true }));
       const legs = allSel().filter((s) => s.ev > 0 && s.p * 100 >= S.minP && (S.lg === 'all' || s.ev_.lg === S.lg)).map((s) => Object.assign({}, s, { name: s.ev_.h + ' – ' + s.ev_.a }));
       const bks = Array.from(new Set(legs.flatMap((l) => Object.keys(l.byBook))));
