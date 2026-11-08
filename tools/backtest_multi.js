@@ -5,12 +5,13 @@ const dir = path.join(__dirname, '..', 'data');
 const M = JSON.parse(fs.readFileSync(path.join(dir, 'multi.json'), 'utf8'));
 const sportOf = {}; M.leagues.forEach((l) => (sportOf[l.id] = l.sport));
 const by = {}; M.results.forEach((r) => (by[r.lg] = by[r.lg] || []).push(r));
-const out = {}, lines = [], pool = {};
+const out = {}, lines = [], pool = {}, wbins = {};
 for (const lg of Object.keys(by)) {
   const rs = by[lg].sort((a, b) => a.d.localeCompare(b.d)); if (rs.length < 60) continue;
   const testFrom = rs[Math.floor(rs.length * 0.45)].d; // se predice la segunda mitad con lo aprendido antes
   const sp = sportOf[lg] || lg.split('/')[0], items = []; const r = X.backtestLeague(rs, sp, testFrom, items); (pool[sp] = pool[sp] || []).push(...items);
   if (!r) continue;
+  if (r.bins) for (const k in r.bins) { const b = ((wbins[sp] = wbins[sp] || {})[k] = (wbins[sp][k] || { n: 0, hit: 0, pm: 0 })); b.n += r.bins[k].n; b.hit += r.bins[k].hit; b.pm += r.bins[k].pm; } // acierto del pick de ganador por rango de probabilidad, por deporte
   out[lg] = { sport: sportOf[lg], n: r.n, acc: r.acc, baseAcc: r.baseAcc, logloss: r.logloss, brier: r.brier, testFrom };
   lines.push([lg, r.n, (r.acc * 100).toFixed(1), (r.baseAcc * 100).toFixed(1), r.logloss.toFixed(3)].join('\t'));
 }
@@ -22,6 +23,7 @@ for (const sp in pool) { // se ajusta con la mitad par y se evalúa en la impar;
   temp[sp] = (oos[sp].antes - oos[sp].despues) >= 0.002 ? oos[sp].s : 1; // solo si mejora ≥ 0.002 fuera de muestra, y con el s validado
 }
 out._oos = oos;
+out._wbins = wbins;
 
 // ¿Conviene compartir ratings entre competiciones (ajuste global de fútbol)? Se compara en la misma ventana: últimos 18 meses
 const soccerLgs = M.leagues.filter((l) => l.sport === 'soccer').map((l) => l.id).filter((lg) => (by[lg] || []).length >= 60);

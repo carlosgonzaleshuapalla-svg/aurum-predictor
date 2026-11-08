@@ -252,3 +252,9 @@ details.fold[open] > summary::after { content: '−'; }
 details.fold[open] { padding-bottom: 10px; }
 .empty-state { margin: 24px 0; text-align: left; border-left: 4px solid var(--copper); }
 .empty-state h3 { margin-bottom: 8px; } .empty-state p { margin: 0 0 12px; line-height: 1.5; }
+
+/* ---------- Combinada: tipo y etiquetas ---------- */
+.combo-ctl { display: flex; gap: 8px; flex-wrap: wrap; }
+.combo-hist { margin-top: 6px; font-size: 13px; } .combo-hist b { font-size: 24px; font-weight: 584; margin-right: 4px; } .combo-hist small { display: block; opacity: .75; font-size: 12px; }
+.combo-kind { font-size: 11px; padding: 2px 7px; vertical-align: middle; }
+.combo-kind.k-gana { background: #e6f4ea; color: #1d6b3f; } .combo-kind.k-goles { background: #fdf3d8; color: #8a5b00; }

@@ -132,34 +132,53 @@
       /* ---------- goles: más/menos y ambos marcan (solo fútbol) + combinada probable del día ---------- */
       const GB = BTM._goals || null;
       const goalsOf = (e) => (fc[e.id] && fc[e.id].info && fc[e.id].info.ou25 ? X.goalPicks(fc[e.id].info, GB && GB.cal) : []);
-      // combinada: el mejor mercado de goles de cada partido de fútbol (un partido = una selección), de más a menos probable
-      function dailyCombo(n) {
-        const todayLima = new Date().toLocaleDateString('en-CA', { timeZone: 'America/Lima' });
-        const cands = evs.filter((e) => e.t > Date.now() && spOf(e) === 'soccer' && !e.pre && fc[e.id] && fc[e.id].info.reliable !== false).map((e) => ({ e, g: goalsOf(e)[0] })).filter((c) => c.g);
-        let pool = cands.filter((c) => new Date(c.e.t).toLocaleDateString('en-CA', { timeZone: 'America/Lima' }) === todayLima), scope = 'hoy';
-        if (pool.length < n) { pool = cands.filter((c) => startsIn(c.e) <= 48); scope = 'próximas 48 horas'; }
-        if (pool.length < n) { pool = cands; scope = 'próximos días'; }
-        const legs = pool.sort((a, b) => b.g.p - a.g.p).slice(0, n);
-        return { legs, scope, joint: legs.reduce((t, c) => t * c.g.p, 1), avg: legs.length ? legs.reduce((t, c) => t + c.g.p, 0) / legs.length : 0 };
+      // combinada: por partido se elige UNA selección (ganador o goles; nunca dos del mismo partido, porque estarían correlacionadas).
+      // El ganador usa la probabilidad del mejor modelo disponible para ese evento (mercado sin margen si hay cuotas; si no, Poisson/Elo recalibrado);
+      // los goles usan Poisson recalibrado con el histórico. Se descartan eventos con pocos datos, pretemporada y partidos parejos.
+      const winnerOf = (e) => { const f = fc[e.id]; if (!f || e.pre || f.info.reliable === false || f.info.cross || f.pick.conf === 'baja') return null; return { kind: 'Ganador', label: f.pick.label, p: f.pick.p }; };
+      const goalLegOf = (e) => { const g = spOf(e) === 'soccer' && fc[e.id] && fc[e.id].info.reliable !== false && !e.pre ? goalsOf(e)[0] : null; return g ? { kind: 'Goles', label: g.label, p: g.p } : null; };
+      function buildLegs(pool, n, mode) {
+        const byP = (x, y) => y.g.p - x.g.p;
+        const W = pool.map((e) => ({ e, g: winnerOf(e) })).filter((c) => c.g).sort(byP), G = pool.map((e) => ({ e, g: goalLegOf(e) })).filter((c) => c.g).sort(byP);
+        if (mode === 'goles') return G.length >= n ? G.slice(0, n) : null;
+        if (mode === 'ganador') return W.length >= n ? W.slice(0, n) : null;
+        // mixta: la mitad de ganadores y la mitad de goles, sin repetir partido; si faltan de un tipo se completa con el otro
+        const nW = Math.max(1, Math.floor(n / 2)), used = new Set(), legs = [];
+        const take = (arr, k) => { for (const c of arr) { if (k <= 0) break; if (!used.has(c.e.id)) { used.add(c.e.id); legs.push(c); k--; } } };
+        take(W, nW); take(G, n - legs.length); take(W, n - legs.length); take(G, n - legs.length);
+        return legs.length >= n ? legs.sort(byP) : null;
+      }
+      function dailyCombo(n, mode) {
+        const todayLima = new Date().toLocaleDateString('en-CA', { timeZone: 'America/Lima' }), dayOf = (e) => new Date(e.t).toLocaleDateString('en-CA', { timeZone: 'America/Lima' });
+        const all = evs.filter((e) => e.t > Date.now() && !e.pre && fc[e.id]);
+        const scopes = [['hoy', all.filter((e) => dayOf(e) === todayLima)], ['próximas 48 horas', all.filter((e) => startsIn(e) <= 48)], ['próximos días', all]];
+        for (const [scope, pool] of scopes) { const legs = buildLegs(pool, n, mode); if (legs) return { legs, scope, joint: legs.reduce((t, c) => t * c.g.p, 1), avg: legs.reduce((t, c) => t + c.g.p, 0) / legs.length }; }
+        return { legs: [], scope: 'sin partidos suficientes', joint: 0, avg: 0 };
       }
       const riskOf = (joint) => (joint >= 0.6 ? ['Riesgo bajo', 'val'] : joint >= 0.4 ? ['Riesgo medio', ''] : ['Riesgo alto', 'warn']);
       function comboPanel() {
-        const n = S.comboN || 4, c = dailyCombo(n);
+        const n = S.comboN || 4, mode = S.comboMode || 'mixta', c = dailyCombo(n, mode);
         const sel = h('select', { class: 'inp', 'aria-label': 'Número de selecciones', onchange: (ev) => { S.comboN = +ev.target.value; saveUI(); box.replaceWith(comboPanel()); } }, [2, 3, 4, 5].map((k) => h('option', { value: String(k) }, k + ' selecciones')));
         sel.value = String(n);
+        const MODES = [['mixta', 'Ganador + goles'], ['ganador', 'Solo ganador'], ['goles', 'Solo goles']];
+        const msel = h('select', { class: 'inp', 'aria-label': 'Tipo de combinada', onchange: (ev) => { S.comboMode = ev.target.value; saveUI(); box.replaceWith(comboPanel()); } }, MODES.map(([v, t]) => h('option', { value: v }, t)));
+        msel.value = mode;
         const box = h('div', { class: 'combo' });
-        box.append(h('div', { class: 'combo-h' }, h('div', {}, h('div', { class: 'combo-t' }, 'Combinada probable del día'), h('div', { class: 'combo-s' }, 'Goles · ' + c.scope)), sel));
-        if (c.legs.length < 2) { box.append(h('div', { class: 'combo-b' }, h('p', { class: 'muted' }, 'No hay suficientes partidos de fútbol con pronóstico de goles para armar una combinada ahora. Prueba más tarde o revisa «Semana» en la lista.'))); return box; }
+        box.append(h('div', { class: 'combo-h' }, h('div', {}, h('div', { class: 'combo-t' }, 'Combinada probable del día'), h('div', { class: 'combo-s' }, (mode === 'mixta' ? 'Ganador + goles' : mode === 'ganador' ? 'Ganador' : 'Goles') + ' · ' + c.scope)), h('div', { class: 'combo-ctl' }, msel, sel)));
+        if (c.legs.length < 2) { box.append(h('div', { class: 'combo-b' }, h('p', { class: 'muted' }, 'No hay suficientes partidos con pronóstico fiable para armar esta combinada ahora. Prueba otro tipo, menos selecciones, o vuelve más tarde (se actualiza cada 8 horas).'))); return box; }
+        const wl = c.legs.filter((x) => x.g.kind === 'Ganador'), WB = BTM._wbins || {}, wbin = wl.map((x) => (WB[spOf(x.e)] || {})[Math.min(9, Math.floor(x.g.p * 10))]).filter((b) => b && b.n >= 30), wN = wbin.reduce((t, b) => t + b.n, 0), nGoals = c.legs.length - wl.length;
         const [risk, rcls] = riskOf(c.joint);
         box.append(h('div', { class: 'combo-b' },
           h('div', { class: 'combo-kpis' },
             h('div', { class: 'combo-k' }, h('div', { class: 'eyebrow dim' }, 'Probabilidad conjunta ', help('conjunta')), h('div', { class: 'combo-big' }, pct(c.joint, 0)), h('span', { class: 'badge ' + rcls }, risk), ' ', help('riesgo'), h('div', { class: 'meta' }, 'Cuota justa ' + od(1 / c.joint) + ' ', help('justa')),
               h('div', { class: 'combo-plain' }, 'En simple: las ' + c.legs.length + ' selecciones se cumplen juntas unas ' + Math.round(c.joint * 100) + ' de cada 100 veces. Tu casa debe pagar más de ' + od(1 / c.joint) + ' por la combinada para que compense.')),
-            GB && GB.n ? h('div', { class: 'combo-k dark' }, h('div', { class: 'eyebrow' }, 'Acierto del modelo ', help('acierto')), h('div', { class: 'combo-big' }, pct(GB.acc, 0)), h('div', { class: 'meta' }, GB.hit + ' / ' + GB.n + ' picks de goles en el histórico')) : null),
+            h('div', { class: 'combo-k dark' }, h('div', { class: 'eyebrow' }, 'Acierto histórico del modelo ', help('acierto')),
+              nGoals && GB && GB.n ? h('div', { class: 'combo-hist' }, h('b', {}, pct(GB.acc, 0)), ' en goles', h('small', {}, GB.hit + ' / ' + GB.n + ' picks')) : null,
+              wl.length ? h('div', { class: 'combo-hist' }, wbin.length ? h('b', {}, pct(wbin.reduce((t, b) => t + b.hit / b.n, 0) / wbin.length, 0)) : h('b', {}, '—'), ' en ganador', h('small', {}, wbin.length ? 'picks pasados con probabilidad parecida (' + wN + ' partidos)' : 'sin histórico suficiente en ese rango')) : null)),
           h('div', { class: 'combo-legs' }, c.legs.map((x) => h('div', { class: 'combo-leg', role: 'button', tabindex: '0', onkeydown: (ev) => { if (ev.key === 'Enter') detail(x.e); }, onclick: () => detail(x.e) },
-            h('div', {}, h('div', { class: 'meta' }, x.e.h + ' vs ' + x.e.a), h('div', { class: 'combo-pick' }, x.g.label), h('div', { class: 'meta' }, flag(x.e.lg), lgById[x.e.lg].name + ' · ' + limaStr(x.e))),
+            h('div', {}, h('div', { class: 'meta' }, x.e.h + ' vs ' + x.e.a), h('div', { class: 'combo-pick' }, h('span', { class: 'badge combo-kind ' + (x.g.kind === 'Goles' ? 'k-goles' : 'k-gana') }, x.g.kind), ' ', x.g.label), h('div', { class: 'meta' }, flag(x.e.lg), lgById[x.e.lg].name + ' · ' + limaStr(x.e))),
             h('div', { class: 'r' }, h('b', { class: 'combo-p' }, pct(x.g.p, 0)), h('div', { class: 'meta' }, 'justa ' + od(1 / x.g.p)))))),
-          h('p', { class: 'hint' }, 'Se toma el mercado de goles más probable de cada partido (más/menos de 1.5, 2.5 o 3.5, y ambos marcan), con la probabilidad recalibrada con el histórico del modelo. La conjunta multiplica las probabilidades suponiendo partidos independientes. Riesgo: bajo ≥ 60 %, medio ≥ 40 %. Son líneas «fáciles», así que las casas pagan cuotas bajas; la cuota justa es el mínimo que debería pagar tu casa. No es una recomendación ni garantiza resultados.')));
+          h('p', { class: 'hint' }, 'En cada partido se elige UNA sola selección (nunca ganador y goles del mismo partido: estarían relacionados y la conjunta saldría mal calculada). «Ganador + goles» arma la mitad con ganadores (probabilidad del mejor modelo para ese evento: mercado sin margen si hay cuotas, o Poisson/Elo recalibrado) y la otra mitad con los goles más probables (Poisson recalibrado con el histórico). Se descartan partidos parejos, pretemporada y equipos con pocos datos. La conjunta multiplica las probabilidades suponiendo partidos independientes. Riesgo: bajo ≥ 60 %, medio ≥ 40 %. Son selecciones «fáciles», así que las casas pagan cuotas bajas; la cuota justa es el mínimo que debería pagar tu casa. No es una recomendación ni garantiza resultados.')));
         return box;
       }
 
