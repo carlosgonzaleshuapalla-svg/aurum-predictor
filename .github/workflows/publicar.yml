@@ -36,6 +36,7 @@ jobs:
           path: |
             data/raw
             data/raw_espn
+            data/raw_players
           key: descargas-${{ steps.mes.outputs.m }}-${{ github.run_id }}
           restore-keys: |
             descargas-${{ steps.mes.outputs.m }}-
@@ -44,6 +45,9 @@ jobs:
         run: |
           python tools/fetch_data.py
           python tools/fetch_espn.py
+      - name: Jugadores y mapas de tiros (opcional; si falla, la web se publica sin goleadores)
+        continue-on-error: true
+        run: python tools/fetch_players.py --max-requests 300
       - name: Guardar descargas en la caché (aunque algo falle después)
         if: always()
         uses: actions/cache/save@v4
@@ -51,6 +55,7 @@ jobs:
           path: |
             data/raw
             data/raw_espn
+            data/raw_players
           key: descargas-${{ steps.mes.outputs.m }}-${{ github.run_id }}
       - name: Cuotas de The Odds API (opcional)
         if: ${{ vars.PUBLICAR_ODDS_API == 'true' }}   # sin secret, la herramienta se omite sola
@@ -62,6 +67,7 @@ jobs:
         run: |
           node tools/backtest.js
           node tools/backtest_multi.js
+          node tools/backtest_players.js || true
           node tests/gate.js
       - name: Armar el sitio (solo lo publicable)
         env:

@@ -93,6 +93,17 @@ try { cp.execFileSync('node', [path.join(__dirname, 'multi.test.js')], { stdio: 
 catch (e) { ok(false, 'tests/multi.test.js\n' + e.stdout.toString().split('\n').filter((l) => l.includes('✗')).join('\n')); }
 try { cp.execFileSync('node', [path.join(__dirname, 'informes.test.js')], { stdio: 'pipe' }); ok(true, 'tests/informes.test.js'); }
 catch (e) { ok(false, 'tests/informes.test.js\n' + e.stdout.toString().split('\n').filter((l) => l.includes('✗')).join('\n')); }
+try { cp.execFileSync('node', [path.join(__dirname, 'scorers.test.js')], { stdio: 'pipe' }); ok(true, 'tests/scorers.test.js'); }
+catch (e) { ok(false, 'tests/scorers.test.js\n' + e.stdout.toString().split('\n').filter((l) => l.includes('✗')).join('\n')); }
+{ // datos de jugadores (opcionales): estructura y coeficientes del xG con sentido físico
+  const pp = path.join(root, 'data', 'players.json');
+  if (fs.existsSync(pp)) {
+    const PJ = JSON.parse(fs.readFileSync(pp, 'utf8')), names = Object.keys(PJ.teams || {});
+    ok(PJ.xg && PJ.xg.coef.length === 3 && PJ.xg.coef[1] < 0 && PJ.xg.coef[2] > 0, 'players.json: el xG baja con la distancia y sube con el ángulo');
+    ok(names.every((n) => { const T = PJ.teams[n]; return T.m.length > 0 && T.m.length <= 12 && T.s.every((s) => s[0] >= 0 && s[0] <= 100 && s[1] >= 0 && s[1] <= 100 && s[4] < T.m.length) && T.p.every((pl) => pl[2].every((r) => r[0] < T.m.length)); }), 'players.json: ' + names.length + ' equipos, coordenadas 0–100 e índices de partido válidos');
+    ok(fs.existsSync(path.join(root, 'data', 'players.js')), 'data/players.js');
+  } else console.log('  (sin data/players.json: opcional, ejecuta python3 tools/fetch_players.py)');
+}
 try { cp.execFileSync('node', [path.join(__dirname, 'seo.test.js')], { stdio: 'pipe' }); ok(true, 'tests/seo.test.js'); }
 catch (e) { ok(false, 'tests/seo.test.js\n' + e.stdout.toString().split('\n').filter((l) => l.includes('✗')).join('\n')); }
 

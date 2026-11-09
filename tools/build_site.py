@@ -26,8 +26,9 @@ ROOT = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 
 PUBLIC_FILES = [
     "index.html", "privacidad.html", "css/styles.css", "css/predictor.css",
-    "js/model.js", "js/multimodel.js", "js/math.js", "js/core.js", "js/pronosticos.js", "js/predictor.js", "js/ads.js", "js/flags.js",
+    "js/model.js", "js/multimodel.js", "js/scorers.js", "js/math.js", "js/core.js", "js/pronosticos.js", "js/predictor.js", "js/ads.js", "js/flags.js",
     "data/history.js", "data/fixtures.js", "data/backtest.js", "data/backtest_multi.js", "data/multi.js", "data/casas_peru.js",
+    "data/players.js", "data/backtest_players.js",   # opcionales: si faltan, el sitio sigue sin goleadores ni mapa de calor
 ]
 OPTIONAL = {"data/odds_api.js": "--with-odds-api"}
 
@@ -146,7 +147,7 @@ def build(root, out, with_odds_api=False, stamp=None, log=print, con_draftkings=
     for rel in files:
         src = os.path.join(root, rel)
         if not os.path.exists(src):
-            if rel.startswith("data/") and rel not in ("data/casas_peru.js",) and rel not in OPTIONAL:
+            if rel.startswith("data/") and rel not in ("data/casas_peru.js", "data/players.js", "data/backtest_players.js") and rel not in OPTIONAL:
                 missing.append(rel)
             continue
         dst = os.path.join(out, rel)

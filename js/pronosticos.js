@@ -90,6 +90,9 @@
         ev: ['Valor esperado (EV)', 'Cuánto ganarías o perderías en promedio por cada S/ 1 apostado si la probabilidad del modelo fuera correcta. Positivo = a largo plazo compensa; negativo = no compensa. Es una estimación.'],
         conf: ['Favorito claro / pareja', 'Indica qué tan cargada está la probabilidad hacia un resultado. «Favorito claro» significa que el modelo ve una ventaja grande, no que sea seguro.'],
         backtest: ['Backtest', 'Prueba del modelo con partidos pasados: se pronostica cada partido usando solo lo que se sabía antes y luego se compara con lo que pasó. Sirve para saber si el modelo merece confianza.'],
+        xg: ['xG (goles esperados)', 'Mide la calidad de cada tiro según DÓNDE se hizo: un remate a un metro del arco vale casi 0,5 goles; uno desde 30 metros, 0,02. Un jugador con más xG que goles está generando ocasiones buenas y le han salido pocas; es una pista de que puede marcar más adelante, no una garantía.'],
+        goleador: ['Probabilidad de marcar', 'Probabilidad de que ese jugador marque AL MENOS un gol en el partido. Sale de los goles esperados del equipo en este partido, repartidos según lo que cada jugador produjo en los últimos partidos. No sabe de lesiones, sanciones ni alineaciones: si no juega, no cuenta.'],
+        calor: ['Mapa de calor', 'Cada tiro de los últimos partidos aparece en el lugar del campo donde se hizo. Los colores intensos marcan las zonas con más tiros; los puntos grandes son tiros de más peligro y la estrella negra marca un gol. En «Defensa» se ven los tiros que le hicieron al equipo, vistos desde su propio arco.'],
         margen: ['Margen de la casa', 'La «comisión» escondida en las cuotas: si sumas las probabilidades que implican las cuotas, pasan de 100 %. Ese exceso es la ganancia de la casa.']
       };
       let tipEl = null;
@@ -194,10 +197,74 @@
           h('div', { style: 'text-align:right' }, h('div', { class: 'pickline' }, pk.label), h('div', {}, h('span', { class: 'badge ' + cls }, CONF[pk.conf]), ' ', h('b', {}, pct(pk.p, 0)), pk.fairOdds < 1.2 ? h('div', {}, h('span', { class: 'badge warn' }, 'cuota muy baja: casi no compensa')) : null)),
           h('div', { style: 'grid-column:1/-1' }, verdictBox(pk), h('div', { style: 'display:flex;gap:14px;flex-wrap:wrap;margin-top:10px' }, bars),
             goalsOf(e)[0] ? h('div', { class: 'meta', style: 'margin-top:8px' }, h('span', { class: 'badge' }, 'Goles'), ' ', h('b', {}, goalsOf(e)[0].label + ' · ' + pct(goalsOf(e)[0].p, 0))) : null,
+            (() => { const a = (teamScorers(e, 'h') || [])[0], b = (teamScorers(e, 'a') || [])[0]; return a || b ? h('div', { class: 'meta', style: 'margin-top:8px' }, h('span', { class: 'badge' }, 'Gol probable'), ' ', [a && a.name + ' ' + pct(a.p, 0), b && b.name + ' ' + pct(b.p, 0)].filter(Boolean).join(' · ')) : null; })(),
             h('div', { class: 'meta', style: 'margin-top:8px' },
               'Cuota justa ' + od(pk.fairOdds), ' ', help('justa'), ' (una casa debe pagar más que esto)' + (pk.best ? ' · EV ' + (pk.ev > 0 ? '+' : '') + (pk.ev * 100).toFixed(0) + ' % (estimación)' : '') +
               (pk.ref ? ' · referencia ' + pk.ref.book + ' ' + od(pk.ref.odds) + ' (no apostable en Perú)' : '') + ' · base: ' + f.source + (f.info.reliable === false ? ' · pocos datos del equipo' : '') + (f.info.cross ? ' · equipos de ligas distintas: fiabilidad limitada' : '') + (e.pre ? ' · pretemporada' : '') +
               (f.source === 'mercado' ? ' · pick del mercado de referencia (sin backtest propio)' : bt && bt.n >= 30 ? ' · acierto histórico del modelo en esta liga ' + pct(bt.acc, 0) + ' (n=' + bt.n + ')' : ' · sin backtest suficiente en esta liga'))));
+      }
+
+      /* ---------- goleadores probables y mapa de calor de tiros (datos reales de los últimos partidos) ---------- */
+      const MINM = 3, PL = root.AURUM_PLAYERS && root.AURUM_PLAYERS.teams, SCR = root.AurumScorers, BTP = root.AURUM_BT_PLAYERS;
+      const teamScorers = (e, side) => {
+        const T = PL && PL[side === 'h' ? e.h : e.a]; if (!T || !SCR || T.m.length < MINM) return null;
+        const info = fc[e.id] && fc[e.id].info, lam = info && info.lh != null ? (side === 'h' ? info.lh : info.la) : null;
+        const rows = SCR.scorers(T, lam); rows.forEach((r) => { r.raw = r.p; r.p = SCR.calibrate(r.p, BTP && BTP.cal); }); return rows.length ? rows : null;
+      };
+      const esc = (s) => String(s).replace(/[&<>"]/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' }[c]));
+      // campo 105 × 68 m; (x, y) de 0 a 100 → metros
+      function pitchSvg(T, mode, name, uid) {
+        const mir = mode === 'def', pts = (mir ? T.a : T.s).map((p) => [mir ? 100 - p[0] : p[0], mir ? 100 - p[1] : p[1], p[2], p[3], p[4], p[5]]);
+        const H = SCR.heat(mir ? T.a : T.s, { cols: 35, rows: 23, mirror: mir, sigma: 7.5 });
+        const cw = 105 / H.cols, ch = 68 / H.rows, ln = 'fill="none" stroke="#9db39a" stroke-width=".35"';
+        let s = '<svg viewBox="-1 -1 107 70" class="pitch" role="img" aria-label="' + esc((mir ? 'Tiros recibidos por ' : 'Tiros de ') + name + ' en sus últimos partidos: ' + H.n + ' tiros') + '"><defs><filter id="bl' + uid + '"><feGaussianBlur stdDeviation=".7"/></filter></defs>' +
+          '<rect x="0" y="0" width="105" height="68" rx="1.5" fill="#e9f0e2" stroke="#9db39a" stroke-width=".4"/><g filter="url(#bl' + uid + ')">';
+        for (let r = 0; r < H.rows; r++) for (let c = 0; c < H.cols; c++) {
+          const t = H.max ? H.cells[r * H.cols + c] / H.max : 0; if (t < 0.07) continue;
+          s += '<rect x="' + (c * cw).toFixed(2) + '" y="' + (r * ch).toFixed(2) + '" width="' + (cw + 0.05).toFixed(2) + '" height="' + (ch + 0.05).toFixed(2) + '" fill="hsl(' + Math.round(55 - 55 * t) + ',95%,50%)" fill-opacity="' + (0.12 + 0.72 * Math.pow(t, 0.85)).toFixed(2) + '"/>';
+        }
+        s += '</g><path d="M52.5 0V68" ' + ln + '/><circle cx="52.5" cy="34" r="9.15" ' + ln + '/><circle cx="52.5" cy="34" r=".5" fill="#9db39a"/>' +
+          ['0', '1'].map((k) => { const f = k === '0' ? 1 : -1, x0 = k === '0' ? 0 : 105; return '<path d="M' + x0 + ' 13.84h' + 16.5 * f + 'V54.16H' + x0 + '" ' + ln + '/><path d="M' + x0 + ' 24.84h' + 5.5 * f + 'V43.16H' + x0 + '" ' + ln + '/><circle cx="' + (x0 + 11 * f) + '" cy="34" r=".45" fill="#9db39a"/><path d="M' + x0 + ' 30.34h' + -1.6 * f + 'V37.66H' + x0 + '" ' + ln + '/>'; }).join('');
+        pts.forEach((p) => {
+          const cx = (p[0] * 1.05).toFixed(1), cy = (p[1] * 0.68).toFixed(1), xg = (p[3] || 0) / 100;
+          if (p[2] === 'g') s += '<path d="M' + cx + ' ' + (cy - 1.9) + 'l.55 1.3 1.4.1-1.1.9.4 1.4-1.25-.8-1.25.8.4-1.4-1.1-.9 1.4-.1z" fill="#261b07" stroke="#fff" stroke-width=".25"/>';
+          else s += '<circle cx="' + cx + '" cy="' + cy + '" r="' + (0.55 + 2.4 * Math.sqrt(xg)).toFixed(2) + '" fill="rgba(38,27,7,' + (p[2] === 't' ? '.5' : '.22') + ')" stroke="rgba(38,27,7,.55)" stroke-width=".15"/>';
+        });
+        return s + '</svg>';
+      }
+      function zoneText(T, mode) {
+        const pts = mode === 'def' ? T.a : T.s, nm = T.m.filter((m) => m[5]).length; if (!nm || pts.length < 8) return 'Pocos tiros con posición registrados para dibujar un patrón fiable.';
+        const z = SCR.zones(pts), p = (v) => Math.round(v / z.n * 100) + ' %';
+        return (mode === 'def' ? 'Recibe ' : 'Hace ') + (z.n / nm).toFixed(1) + ' tiros por partido (' + nm + ' partidos): ' + p(z.box + z.six) + ' dentro del área (' + p(z.six) + ' desde el área chica), ' + p(z.mid) + ' por el centro y ' + p(z.left + z.right) + ' por las bandas. xG medio por tiro ' + (z.xg / z.n).toFixed(2) + '.';
+      }
+      function playersPanel(e) {
+        const Th = PL && PL[e.h], Ta = PL && PL[e.a]; if (!SCR || ![Th, Ta].some((T) => T && T.m.length >= MINM)) return null;
+        const box = h('div', { class: 'panel stack plpanel' }), uid = 'p' + String(e.id).replace(/\W/g, '');
+        let mode = 'att';
+        const col = (T, side, name) => {
+          const rows = T ? teamScorers(e, side) : null, n = T ? T.m.length : 0;
+          if (!rows) return h('div', { class: 'plcol' }, h('div', { class: 'eyebrow dim' }, name), h('p', { class: 'hint' }, 'Todavía hay pocos partidos recientes de este equipo (' + n + ') para estimar quién marca; se completa en las próximas actualizaciones.'));
+          return h('div', { class: 'plcol' }, h('div', { class: 'eyebrow dim' }, name + ' · últimos ' + n + ' partidos'),
+            rows.slice(0, 4).map((r) => h('div', { class: 'plrow' }, h('div', {}, h('b', {}, r.name), h('small', {}, SCR.posGroup(r.pos) + ' · ' + r.g + (r.g === 1 ? ' gol' : ' goles') + ' en ' + r.apps + (r.apps === 1 ? ' partido' : ' partidos') + ' · xG ' + r.xg.toFixed(1) + ' · ' + r.sh + ' tiros')),
+              h('div', { class: 'plp' }, h('b', {}, pct(r.p, 0)), h('small', {}, 'cuota justa ' + od(1 / r.p))))));
+        };
+        const map = (T, name, k) => h('div', { class: 'plmap' }, h('div', { class: 'eyebrow dim' }, name),
+          T && T.m.length >= MINM && T.m.some((m) => m[5]) ? h('div', { html: pitchSvg(T, mode, name, uid + k) }) : h('p', { class: 'hint' }, 'Sin suficientes partidos con la posición de los tiros registrada (ESPN no la publica en todas las ligas).'),
+          T && T.m.length >= MINM && T.m.some((m) => m[5]) ? h('p', { class: 'hint' }, zoneText(T, mode)) : null);
+        const draw = () => {
+          box.replaceChildren();
+          box.append(h('div', { class: 'eyebrow' }, 'Goleadores probables', help('goleador')),
+            h('div', { class: 'plgrid' }, col(Th, 'h', e.h), col(Ta, 'a', e.a)),
+            h('p', { class: 'hint' }, 'Probabilidad de marcar al menos un gol, repartiendo los goles esperados de cada equipo en este partido según los tiros y goles de sus jugadores en los últimos partidos (calidad del tiro = xG', help('xg'), '). No conoce lesiones ni alineaciones: confirma que juegue antes de usarlo. ' +
+              (BTP && BTP.preds >= 300 ? 'En una prueba con ' + BTP.matches + ' partidos pasados, el primer candidato de cada equipo marcó ' + pct(BTP.top1, 0) + ' de las veces y al menos uno de los tres primeros, ' + pct(BTP.top3, 0) + '.' : '')));
+          if ([Th, Ta].some((T) => T && T.m.length >= MINM && T.m.filter((m) => m[5]).length >= 2)) {
+            const tg = ['att', 'def'].map((m) => h('button', { type: 'button', class: 'sp-chip' + (mode === m ? ' on' : ''), style: '--sc:#2e8b57', 'aria-pressed': mode === m ? 'true' : 'false', onclick: () => { mode = m; draw(); } }, m === 'att' ? 'Ataque: dónde tiran' : 'Defensa: dónde les tiran'));
+            box.append(h('div', { class: 'eyebrow', style: 'margin-top:8px' }, 'Mapa de calor de tiros', help('calor')), h('div', { class: 'sp-row', role: 'group', 'aria-label': 'Tipo de mapa' }, tg),
+              h('div', { class: 'plgrid' }, map(Th, e.h, 'h'), map(Ta, e.a, 'a')),
+              h('p', { class: 'hint' }, (mode === 'att' ? 'Ataque: el equipo ataca hacia la derecha. ' : 'Defensa: se ve su propio arco a la izquierda y los tiros que recibió. ') + 'Color más intenso = más tiros · punto grande = tiro más peligroso · ★ = gol. Basado en los últimos partidos con posiciones de tiros registradas por ESPN; los más recientes pesan más.'));
+          }
+        };
+        draw(); return box;
       }
 
       /* ---------- cuotas por casa frente a la cuota justa del pronóstico ---------- */
@@ -271,6 +338,7 @@
             else if (ff.info.rH != null) body.append(h('p', { class: 'muted', style: 'font-size:13px' }, 'Elo ' + e.h + ' ' + Math.round(ff.info.rH) + ' (' + ff.info.nH + ' partidos) · ' + e.a + ' ' + Math.round(ff.info.rA) + ' (' + ff.info.nA + ' partidos)'));
             if (gp.length) body.append(h('div', {}, h('div', { class: 'eyebrow dim' }, 'Goles'), h('div', { class: 'table-wrap' }, h('table', { class: 'tbl' }, h('thead', {}, h('tr', {}, ['Mercado', 'Probabilidad', 'Cuota justa'].map((c, i) => h('th', { class: i ? 'r' : '' }, c, i === 2 ? help('justa') : null)))),
               h('tbody', {}, gp.map((g) => h('tr', {}, h('td', {}, g.label), h('td', { class: 'r' }, h('b', {}, pct(g.p, 0))), h('td', { class: 'r muted' }, od(1 / g.p))))))), h('p', { class: 'hint' }, 'Probabilidades del modelo de goles (Poisson), recalibradas con su histórico. Una línea «fácil» como más de 1.5 es probable pero paga poco.')));
+            { const pp = playersPanel(e); if (pp) body.append(pp); }
             body.append(oddsComparison(e, ff, draw));
           }
           [e.h, e.a].forEach((t) => { const lr = lastResults(e.lg, t); if (lr.length) body.append(h('div', {}, h('div', { class: 'eyebrow dim' }, 'Últimos resultados · ' + t), h('div', { class: 'meta' }, lr.map((r) => { const won = (r.w === 'h' && r.h === t) || (r.w === 'a' && r.a === t), d = r.w === 'd'; return h('span', { class: 'badge ' + (won ? 'val' : d ? '' : 'warn'), style: 'margin:2px 4px 2px 0' }, (r.h === t ? 'vs ' + r.a : '@ ' + r.h) + (r.hs != null ? ' ' + r.hs + '-' + r.as : '') + (won ? ' G' : d ? ' E' : ' P')); })))); });

@@ -2,6 +2,7 @@
 tools/.odds_api_key
 data/raw/
 data/raw_espn/
+data/raw_players/
 data/*.json
 data/*.js
 !data/casas_peru.js

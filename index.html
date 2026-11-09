@@ -42,19 +42,20 @@
     </div>
   </footer>
 
-  <script src="js/model.js?v=26"></script>
-  <script src="js/multimodel.js?v=26"></script>
+  <script src="js/model.js?v=27"></script>
+  <script src="js/multimodel.js?v=27"></script>
+  <script src="js/scorers.js?v=27"></script>
   <script src="js/math.js"></script>
   <script src="js/core.js"></script>
   <script>
     // Los datos se recargan siempre (sin caché) para ver lo último que dejó tools/fetch_*.py
-    ['history', 'fixtures', 'backtest', 'multi', 'backtest_multi', 'casas_peru', 'odds_api'].forEach(function (n) {
+    ['history', 'fixtures', 'backtest', 'multi', 'backtest_multi', 'casas_peru', 'odds_api', 'players', 'backtest_players'].forEach(function (n) {
       document.write('<script src="data/' + n + '.js?t=' + Date.now() + '" onerror="window.__noData=' + (n === 'history' || n === 'fixtures' ? 'true' : 'false') + '"><\/script>');
     });
   </script>
-  <script src="js/flags.js?v=26"></script>
-  <script src="js/pronosticos.js?v=26"></script>
-  <script src="js/predictor.js?v=26"></script>
-  <script src="js/ads.js?v=26"></script>
+  <script src="js/flags.js?v=27"></script>
+  <script src="js/pronosticos.js?v=27"></script>
+  <script src="js/predictor.js?v=27"></script>
+  <script src="js/ads.js?v=27"></script>
 </body>
 </html>

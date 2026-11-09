@@ -258,3 +258,13 @@ details.fold[open] { padding-bottom: 10px; }
 .combo-hist { margin-top: 6px; font-size: 13px; } .combo-hist b { font-size: 24px; font-weight: 584; margin-right: 4px; } .combo-hist small { display: block; opacity: .75; font-size: 12px; }
 .combo-kind { font-size: 11px; padding: 2px 7px; vertical-align: middle; }
 .combo-kind.k-gana { background: #e6f4ea; color: #1d6b3f; } .combo-kind.k-goles { background: #fdf3d8; color: #8a5b00; }
+
+/* ---- goleadores probables y mapa de calor ---- */
+.plpanel { gap: 12px; }
+.plgrid { display: grid; grid-template-columns: 1fr 1fr; gap: 20px; }
+.plcol, .plmap { min-width: 0; }
+.plrow { display: flex; justify-content: space-between; align-items: center; gap: 12px; padding: 9px 0; border-bottom: 1px solid var(--graphite); }
+.plrow b { font-weight: 600; } .plrow small { display: block; font-size: 12px; color: var(--fog); }
+.plp { text-align: right; flex: none; } .plp b { font-size: 18px; font-variant-numeric: tabular-nums; }
+svg.pitch { width: 100%; height: auto; display: block; border-radius: 6px; margin: 6px 0 4px; }
+@media (max-width: 720px) { .plgrid { grid-template-columns: 1fr; } }
