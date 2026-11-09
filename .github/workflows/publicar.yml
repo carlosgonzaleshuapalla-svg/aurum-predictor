@@ -37,6 +37,7 @@ jobs:
             data/raw
             data/raw_espn
             data/raw_players
+            data/seo_matches.json
           key: descargas-${{ steps.mes.outputs.m }}-${{ github.run_id }}
           restore-keys: |
             descargas-${{ steps.mes.outputs.m }}-
@@ -56,6 +57,7 @@ jobs:
             data/raw
             data/raw_espn
             data/raw_players
+            data/seo_matches.json
           key: descargas-${{ steps.mes.outputs.m }}-${{ github.run_id }}
       - name: Cuotas de The Odds API (opcional)
         if: ${{ vars.PUBLICAR_ODDS_API == 'true' }}   # sin secret, la herramienta se omite sola

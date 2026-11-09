@@ -89,7 +89,7 @@ function shell(opts) {
   return '<!doctype html>\n<html lang="es">\n<head>\n  <meta charset="utf-8">\n  <meta name="viewport" content="width=device-width, initial-scale=1">\n' +
     '  ' + opts.headBits.join('\n  ') + '\n' +
     '  <title>' + esc(opts.title) + '</title>\n  <meta name="description" content="' + esc(opts.desc) + '">\n' +
-    '  <link rel="canonical" href="' + esc(opts.canonical) + '">\n  <meta name="robots" content="index,follow,max-image-preview:large">\n  <meta name="theme-color" content="#f8f7f5">\n' +
+    '  <link rel="canonical" href="' + esc(opts.canonical) + '">\n  <meta name="robots" content="' + (opts.robots || 'index,follow,max-image-preview:large') + '">\n  <meta name="theme-color" content="#f8f7f5">\n' +
     '  <meta property="og:type" content="website"><meta property="og:locale" content="es_PE"><meta property="og:site_name" content="Aurum Predictor">\n' +
     '  <meta property="og:title" content="' + esc(opts.title) + '"><meta property="og:description" content="' + esc(opts.desc) + '"><meta property="og:url" content="' + esc(opts.canonical) + '">\n' +
     '  <link rel="stylesheet" href="' + up + opts.css[0] + '">\n  <link rel="stylesheet" href="' + up + opts.css[1] + '">\n' +
@@ -325,6 +325,26 @@ function build(dist) {
     fs.mkdirSync(dir, { recursive: true });
     fs.writeFileSync(path.join(dir, 'index.html'), matchPage(it, ctxIn));
   }
+  // Páginas de partidos ya jugados: sin esto, cada build borra partidos/ y las URLs que Google ya indexó dan 404
+  // (Search Console avisa «No se ha encontrado (404)»). Se recuerdan las URLs publicadas en data/seo_matches.json
+  // (va en la caché del workflow) y, cuando el partido pasa, se deja una página breve con noindex fuera del sitemap.
+  const stPath = path.join(path.dirname(dist), 'data', 'seo_matches.json'); let old = {};
+  try { old = JSON.parse(fs.readFileSync(stPath, 'utf8')) || {}; } catch (e) { /* primera vez */ }
+  const cur = {}; items.forEach((it) => { cur[it.url] = { sl: slugs[it.lg.id], ln: it.lg.name, h: it.e.h, a: it.e.a, ko: it.e.ko }; });
+  const merged = Object.assign({}, old, cur);
+  for (const u of Object.keys(merged)) if (!(Date.parse(merged[u].ko) > now - 120 * 864e5)) delete merged[u];
+  try { fs.mkdirSync(path.dirname(stPath), { recursive: true }); fs.writeFileSync(stPath, JSON.stringify(merged)); } catch (e) { /* solo pierde el recuerdo */ }
+  let stubs = 0;
+  for (const u of Object.keys(merged)) {
+    if (cur[u]) continue;
+    const m = merged[u], dir = path.join(mDir, u); fs.mkdirSync(dir, { recursive: true });
+    const lgLink = Object.values(slugs).includes(m.sl) ? '<a href="../../ligas/' + m.sl + '/" style="text-decoration:underline">' + esc(m.ln) + '</a>' : esc(m.ln);
+    const body = '<p class="muted"><a href="../../ligas/" style="text-decoration:underline">Ligas</a> › ' + lgLink + '</p>\n<h1>' + esc(m.h) + ' vs ' + esc(m.a) + ': partido ya jugado</h1>\n' +
+      '<p>El partido <b>' + esc(m.h) + ' – ' + esc(m.a) + '</b> de ' + esc(m.ln) + ' (' + esc(limaWhen(m.ko)) + ', hora de Lima) ya se jugó, así que dejó de tener pronóstico.</p>\n' +
+      '<p>Mira los <a href="../../pronosticos-hoy/" style="text-decoration:underline">pronósticos de hoy</a>, los de <a href="../../pronosticos-manana/" style="text-decoration:underline">mañana</a>, los próximos partidos de ' + lgLink + ' o el <a href="../../informes/" style="text-decoration:underline">informe semanal</a> con los aciertos y fallos del modelo.</p>\n';
+    fs.writeFileSync(path.join(dir, 'index.html'), shell({ title: m.h + ' vs ' + m.a + ': partido ya jugado | Aurum Predictor', desc: 'Este partido ya se jugó. Consulta los pronósticos de hoy y mañana.', canonical: SITE + '/partidos/' + u + '/', depth: 2, robots: 'noindex,follow', ...head,
+      crumbs: [['Inicio', SITE + '/'], ['Ligas', SITE + '/ligas/'], [m.h + ' vs ' + m.a, SITE + '/partidos/' + u + '/']], body })); stubs++;
+  }
   const today = limaYMD(new Date().toISOString()), tomorrow = limaYMD(new Date(now + 864e5).toISOString());
   for (const [kind, ymd, dir] of [['hoy', today, 'pronosticos-hoy'], ['manana', tomorrow, 'pronosticos-manana']]) {
     fs.mkdirSync(path.join(dist, dir), { recursive: true });
@@ -341,7 +361,7 @@ function build(dist) {
   fs.writeFileSync(path.join(dist, 'sitemap.xml'), '<?xml version="1.0" encoding="UTF-8"?>\n<urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">\n' +
     urls.map((u) => '  <url><loc>' + esc(u) + '</loc><lastmod>' + day + '</lastmod></url>').join('\n') + '\n</urlset>\n');
   fs.writeFileSync(path.join(dist, 'robots.txt'), 'User-agent: *\nAllow: /\n\nSitemap: ' + SITE + '/sitemap.xml\n');
-  return { pages: leagues.length, matches: items.length, urls: urls.length };
+  return { pages: leagues.length, matches: items.length, finished: stubs, urls: urls.length };
 }
 
 module.exports = { build, esc, slugify, leagueSlugs, form, unpackMulti };
